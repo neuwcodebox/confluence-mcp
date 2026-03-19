@@ -95,22 +95,12 @@ class ConfluenceClient:
         return cls(base_url=base_url, token=token, api_version=api_version)
 
     @staticmethod
-    def _compose_search_cql(space_key: str, cql: str, order_by: str | None = None) -> str:
+    def _compose_search_cql(cql: str, order_by: str | None = None) -> str:
         cql_text = cql.strip()
-        extracted_order: str | None = None
-
-        # Backward-compatible: if caller included ORDER BY inside cql, split it out.
-        upper = cql_text.upper()
-        idx = upper.rfind(" ORDER BY ")
-        if idx >= 0:
-            extracted_order = cql_text[idx + len(" ORDER BY "):].strip()
-            cql_text = cql_text[:idx].strip()
-
-        effective_order = (order_by or extracted_order or "").strip()
-        base = f'space = {space_key} AND type = "page" AND ({cql_text})'
+        effective_order = (order_by or "").strip()
         if effective_order:
-            return f"{base} ORDER BY {effective_order}"
-        return base
+            return f"{cql_text} ORDER BY {effective_order}"
+        return cql_text
 
     async def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
@@ -145,13 +135,12 @@ class ConfluenceClient:
 
     async def search_space_cql(
         self,
-        space_key: str,
         cql: str,
         limit: int,
         cursor: str | None,
         order_by: str | None = None,
     ) -> dict[str, Any]:
-        query_cql = self._compose_search_cql(space_key=space_key, cql=cql, order_by=order_by)
+        query_cql = self._compose_search_cql(cql=cql, order_by=order_by)
         if self.api_version == "v1":
             params: dict[str, Any] = {
                 "cql": query_cql,
@@ -250,7 +239,7 @@ def html_to_markdown(value: str | None) -> str:
 
 
 def cache_dir() -> Path:
-    path = Path(os.getenv("CONFLUENCE_CACHE_DIR", "/data/cache")).expanduser()
+    path = Path(os.getenv("CONFLUENCE_CACHE_DIR", "./cache")).expanduser()
     path.mkdir(parents=True, exist_ok=True)
     return path
 

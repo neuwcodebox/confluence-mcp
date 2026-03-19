@@ -267,7 +267,6 @@ def _to_tool_result(structured: dict[str, Any], markdown_text: str) -> CallToolR
 
 @mcp.tool()
 async def search_space_cql(
-    space_key: str,
     cql: str,
     limit: int = 10,
     cursor: str | None = None,
@@ -281,16 +280,16 @@ async def search_space_cql(
     - Inspect content with `read_page`,
     - Expand local/global context with `list_page_children` and `get_page_ancestors`.
 
-    Quick CQL recipes (pass only filter expression in `cql`; use `order_by` for sorting):
+    Quick CQL recipes (include space condition inside `cql`; use `order_by` for sorting):
 
     1) All pages
-       type = "page"
+       space = DEV AND type = "page"
 
     2) Title contains keyword
-       title ~ "release"
+       space = DEV AND title ~ "release"
 
     3) Full-text contains term
-       text ~ "runbook"
+       space = DEV AND text ~ "runbook"
 
     4) Recently updated first
        cql: lastmodified >= "2024/01/01"
@@ -318,7 +317,7 @@ async def search_space_cql(
     - Combine conditions with AND/OR and parentheses explicitly.
     """
     client = _client_from_context(ctx)
-    data = await client.search_space_cql(space_key=space_key, cql=cql, limit=limit, cursor=cursor, order_by=order_by)
+    data = await client.search_space_cql(cql=cql, limit=limit, cursor=cursor, order_by=order_by)
 
     items: list[PageSummary] = []
     for row in data.get("results", []):

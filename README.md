@@ -19,7 +19,7 @@ The server auto-loads a local `.env` file on startup (via `python-dotenv`) for d
 - `CONFLUENCE_API_VERSION` (optional): `v2` (default) or `v1` for legacy Confluence instances.
 - `CONFLUENCE_SSL_VERIFY` (optional): TLS cert verification toggle (`true` default, set `false` to disable).
 - `CONFLUENCE_CA_BUNDLE` (optional): path to a custom CA bundle file for TLS verification.
-- `CONFLUENCE_CACHE_DIR` (optional): markdown cache directory (default `/data/cache`)
+- `CONFLUENCE_CACHE_DIR` (optional): markdown cache directory (default `./cache`)
 - `MAX_MARKDOWN_CHARS` (optional): max markdown body size after conversion (default `12000`)
 - `IN_MEMORY_CACHE_TTL_SECONDS` (optional): API response cache TTL in seconds (default `1800`)
 - `IN_MEMORY_CACHE_SIZE` (optional): API response cache size (default `1000`)
@@ -48,7 +48,7 @@ CONFLUENCE_SSL_VERIFY=false
 
 All tools return both structured JSON (`structuredContent`) and human-readable markdown text (`content`).
 
-- `search_space_cql`: searches only page-type contents in a given `space_key` with CQL and returns absolute page URLs. Use optional `order_by` for sorting.
+- `search_space_cql`: searches pages with full CQL (including your `space = ...` condition) and returns absolute page URLs. Use optional `order_by` for sorting.
 - `list_page_children`: returns direct children of a page and always includes parent title.
 - `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view. `header_path` supports array-based hierarchical syntax (e.g., `["Top", "Child", "Target"]`). If a single name is duplicated, all matched sections are returned. For quick skim, set `header_path=["TOC"]`.
 - `get_page_ancestors`: returns page breadcrumb lineage.

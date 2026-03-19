@@ -24,7 +24,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
    - If both are missing, return an auth error.
 
 ## Caching
-- Target: markdown converted page body.
+- Target: markdown converted page body (default dir `./cache` unless overridden).
 - Cache key: `page_id + page_version`.
 - Flow:
   1. Fetch page version metadata first.
@@ -76,8 +76,8 @@ Body
 
 ## Tool list
 1. `search_space_cql`
-   - Input: `space_key`, `cql`, `order_by?`, `limit`, `cursor`
-   - Behavior: force `type = "page"` to exclude attachments/blogposts/etc.
+   - Input: `cql`, `order_by?`, `limit`, `cursor`
+   - Behavior: caller controls full CQL filter (include `space = ...` explicitly when needed).
    - Output: page id/title/absolute url/excerpt (markdown), next cursor
 2. `list_page_children`
    - Input: `page_id`, `limit`, `cursor`
