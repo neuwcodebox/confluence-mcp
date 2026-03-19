@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urlparse, urljoin
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -122,6 +122,15 @@ def _next_cursor(payload: dict[str, Any]) -> str | None:
         return raw_next
     return None
 
+
+
+
+def _absolute_webui_url(base_url: str, maybe_relative: str | None) -> str | None:
+    if not maybe_relative:
+        return None
+    if maybe_relative.startswith("http://") or maybe_relative.startswith("https://"):
+        return maybe_relative
+    return urljoin(base_url.rstrip("/") + "/", maybe_relative)
 
 def _normalize_heading(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).casefold()
@@ -245,7 +254,7 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
             PageSummary(
                 page_id=str(content.get("id", "")),
                 title=content.get("title") or "(untitled)",
-                url=((content.get("_links") or {}).get("webui")),
+                url=_absolute_webui_url(client.base_url, ((content.get("_links") or {}).get("webui"))),
                 excerpt_markdown=html_to_markdown(excerpt_html),
             )
         )
