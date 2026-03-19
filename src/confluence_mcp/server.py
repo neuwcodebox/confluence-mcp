@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+from urllib.parse import parse_qs, urlparse
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -78,7 +79,20 @@ def _client_from_context(ctx: Context | None) -> ConfluenceClient:
 
 def _next_cursor(payload: dict[str, Any]) -> str | None:
     links = payload.get("_links") or {}
-    return links.get("next")
+    raw_next = links.get("next")
+    if not isinstance(raw_next, str) or not raw_next:
+        return None
+
+    parsed = urlparse(raw_next)
+    query = parse_qs(parsed.query)
+    cursor_values = query.get("cursor")
+    if cursor_values and cursor_values[0]:
+        return cursor_values[0]
+
+    # fallback: when API already returns plain token
+    if "?" not in raw_next and "&" not in raw_next and "/" not in raw_next:
+        return raw_next
+    return None
 
 
 def _normalize_heading(text: str) -> str:
@@ -127,20 +141,22 @@ def _extract_section(markdown_text: str, header: str) -> str:
         raise ValueError(f"Requested header not found: {header}")
 
     out = [lines[target_index]]
+    in_nested_subsection = False
     for idx in range(target_index + 1, len(lines)):
         line = lines[idx]
         matched = HEADING_RE.match(line)
-        if not matched:
-            if out and HEADING_RE.match(out[-1]):
-                out.append(line)
+        if matched:
+            level = len(matched.group(1))
+            if level <= target_level:
+                break
+
+            out.append(line)
+            out.append("(collapsed)")
+            in_nested_subsection = True
             continue
 
-        level = len(matched.group(1))
-        if level <= target_level:
-            break
-
-        out.append(line)
-        out.append("(collapsed)")
+        if not in_nested_subsection:
+            out.append(line)
 
     return "\n".join(out).strip()
 

@@ -24,6 +24,10 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Default size: 1000 entries.
 - Env overrides: `IN_MEMORY_CACHE_TTL_SECONDS`, `IN_MEMORY_CACHE_SIZE`.
 
+## Pagination cursor normalization
+- Parse `_links.next` and return only the `cursor` token in tool responses.
+- Clients can pass returned token back to `cursor` directly.
+
 ## Content normalization
 - Always convert Confluence HTML content to Markdown.
 - Return reduced/curated JSON schema only.

@@ -18,8 +18,8 @@ uv run confluence-mcp
 - `MAX_MARKDOWN_CHARS` (optional): max markdown body size after conversion (default `12000`)
 - `IN_MEMORY_CACHE_TTL_SECONDS` (optional): API response cache TTL in seconds (default `1800`)
 - `IN_MEMORY_CACHE_SIZE` (optional): API response cache size (default `1000`)
-- `MCP_TRANSPORT` (optional): `stdio` (default) or `streamable-http`
-- `MCP_HOST` (optional): host for HTTP mode (`127.0.0.1`)
+- `MCP_TRANSPORT` (optional): `stdio` or `streamable-http` (Docker default: `streamable-http`)
+- `MCP_HOST` (optional): host for HTTP mode (`127.0.0.1`, Docker default `0.0.0.0`)
 - `MCP_PORT` (optional): port for HTTP mode (`8000`)
 
 ## Tooling
@@ -56,10 +56,13 @@ These go into the `cql` argument (the tool automatically adds `space = <space_ke
 
 ```bash
 docker build -t confluence-mcp .
-docker run --rm \
+docker run --rm -p 8000:8000 \
   -e CONFLUENCE_BASE_URL="https://your-domain.atlassian.net/wiki" \
   -e MCP_AUTH_KEY="your-mcp-auth-key" \
   -e CONFLUENCE_TOKEN="your-default-confluence-token" \
+  -e MCP_TRANSPORT="streamable-http" \
+  -e MCP_HOST="0.0.0.0" \
+  -e MCP_PORT="8000" \
   -v confluence-mcp-cache:/data/cache \
   confluence-mcp
 ```
