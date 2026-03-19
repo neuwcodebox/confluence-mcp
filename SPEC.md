@@ -54,7 +54,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 ## Section-focused read (`read_page`)
 - Optional `header` argument to return one section.
 - `header` supports plain name or hierarchical path (`Top > Child > Target`).
-- Duplicate header names trigger an error listing matched header paths so clients can retry with path syntax.
+- Duplicate header names return all matched sections in one response (each includes matched header path).
 - Nested sub-headers are preserved as headings but body is collapsed:
 
 ```md

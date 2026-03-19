@@ -204,36 +204,38 @@ def _extract_section(markdown_text: str, header: str) -> str:
     if not matches:
         raise ValueError(f"Requested header not found: {header}")
 
-    if len(matches) > 1 and ">" not in header:
-        candidates = "\n- " + "\n- ".join([e["path"] for e in matches])
-        raise ValueError(
-            "Duplicate header name found. Please use hierarchical header path (e.g. 'A > B > C'). "
-            f"Matched paths:{candidates}"
-        )
+    # If duplicate names are matched with plain header, return all matched sections.
+    targets = matches
 
-    target = matches[0]
-    target_index = int(target["index"])
-    target_level = int(target["level"])
+    sections: list[str] = []
+    for target in targets:
+        target_index = int(target["index"])
+        target_level = int(target["level"])
 
-    out = [lines[target_index]]
-    in_nested_subsection = False
-    for idx in range(target_index + 1, len(lines)):
-        line = lines[idx]
-        matched = HEADING_RE.match(line)
-        if matched:
-            level = len(matched.group(1))
-            if level <= target_level:
-                break
+        out = [lines[target_index]]
+        in_nested_subsection = False
+        for idx in range(target_index + 1, len(lines)):
+            line = lines[idx]
+            matched = HEADING_RE.match(line)
+            if matched:
+                level = len(matched.group(1))
+                if level <= target_level:
+                    break
 
-            out.append(line)
-            out.append("(collapsed)")
-            in_nested_subsection = True
-            continue
+                out.append(line)
+                out.append("(collapsed)")
+                in_nested_subsection = True
+                continue
 
-        if not in_nested_subsection:
-            out.append(line)
+            if not in_nested_subsection:
+                out.append(line)
 
-    return "\n".join(out).strip()
+        section_text = "\n".join(out).strip()
+        if len(targets) > 1:
+            section_text = f"### Matched Header Path: {target['path']}\n\n{section_text}"
+        sections.append(section_text)
+
+    return "\n\n---\n\n".join(sections)
 
 
 def _truncate(text: str, limit: int) -> tuple[str, bool]:
@@ -305,7 +307,7 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
     """Read a page as Markdown. Optionally provide `header` for section focus.
 
     `header` supports either plain heading text or hierarchical path syntax: "Top > Child > Target".
-    If duplicate heading names exist, tool raises guidance with candidate header paths.
+    If duplicate heading names exist for plain header input, all matched sections are returned.
     """
     client = _client_from_context(ctx)
 
