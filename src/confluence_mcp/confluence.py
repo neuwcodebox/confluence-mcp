@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import hashlib
 import os
 import time
 from collections import OrderedDict
@@ -64,6 +65,7 @@ class ConfluenceClient:
     def __init__(self, base_url: str, token: str) -> None:
         self.base_url = base_url.rstrip("/")
         self.token = token
+        self._token_cache_id = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     @classmethod
     def from_token(cls, token: str) -> "ConfluenceClient":
@@ -75,7 +77,7 @@ class ConfluenceClient:
     async def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
         params = params or {}
-        cache_key = f"{self.base_url}|{path}|{sorted(params.items())}|{self.token[:8]}"
+        cache_key = f"{self._token_cache_id}|{path}|{sorted(params.items())}"
         cached = API_CACHE.get(cache_key)
         if cached is not None:
             return cached
