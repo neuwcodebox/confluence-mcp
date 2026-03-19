@@ -46,9 +46,11 @@ CONFLUENCE_SSL_VERIFY=false
 
 ## Tooling
 
+All tools include a human-readable `markdown` field (or markdown-formatted main content) for efficient browsing.
+
 - `search_space_cql`: searches only page-type contents in a given `space_key` with CQL and returns absolute page URLs.
 - `list_page_children`: returns direct children of a page and always includes parent title.
-- `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view. `header` supports hierarchical path syntax (e.g., `Top > Child > Target`). If plain header name is duplicated, all matched sections are returned.
+- `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view. `header_path` supports array-based hierarchical syntax (e.g., `["Top", "Child", "Target"]`). If a single name is duplicated, all matched sections are returned. Supports `toc_only` for quick document overview.
 - `get_page_ancestors`: returns page breadcrumb lineage.
 
 
@@ -71,7 +73,7 @@ These go into the `cql` argument (the tool automatically adds `space = <space_ke
 - Cache hit: returns cached markdown immediately.
 - Cache miss: fetches page body, converts HTML to markdown, stores to disk cache.
 - Adds a generated TOC at the beginning of output.
-- Supports section-focused reading via `header` option.
+- Supports section-focused reading via `header_path` option.
 - If content exceeds limit, truncates and appends `...(truncated)`.
 
 ## Docker

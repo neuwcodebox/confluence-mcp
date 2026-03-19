@@ -45,6 +45,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Clients can pass returned token back to `cursor` directly.
 
 ## Content normalization
+- Every tool includes human-readable markdown text for unstructured consumption.
 - Tool responses omit null/unused fields to reduce LLM token usage.
 - Always convert Confluence HTML content to Markdown.
 - Return reduced/curated JSON schema only.
@@ -52,9 +53,9 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Apply truncation limit using `read_page.max_chars` or `MAX_MARKDOWN_CHARS`.
 
 ## Section-focused read (`read_page`)
-- Optional `header` argument to return one section.
-- `header` supports plain name or hierarchical path (`Top > Child > Target`).
-- Duplicate header names return all matched sections in one response (each includes matched header path).
+- Optional `header_path` argument to return one section (`["Top", "Child", "Target"]`).
+- If `header_path` has one name and duplicates exist, all matched sections are returned (each includes matched header path).
+- Optional `toc_only` argument returns TOC-focused output for quick skim.
 - Nested sub-headers are preserved as headings but body is collapsed:
 
 ```md
@@ -82,7 +83,7 @@ Body
    - Input: `page_id`, `limit`, `cursor`
    - Output: parent title + direct child pages
 3. `read_page`
-   - Input: `page_id`, `header?`, `max_chars?`
+   - Input: `page_id`, `header_path?`, `toc_only?`, `max_chars?`
    - Output: title/body markdown(+TOC), version, cache hit, truncation info
 4. `get_page_ancestors`
    - Input: `page_id`

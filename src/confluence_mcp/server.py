@@ -188,21 +188,23 @@ def _build_toc(markdown_text: str) -> str:
     return "\n".join(lines)
 
 
-def _extract_section(markdown_text: str, header: str) -> str:
+def _extract_section(markdown_text: str, header_path: list[str]) -> str:
     lines = markdown_text.splitlines()
     heading_entries = _collect_heading_entries(markdown_text)
+    normalized_parts = [_normalize_heading(part) for part in header_path if part.strip()]
+    if not normalized_parts:
+        raise ValueError("header_path must contain at least one non-empty heading name.")
 
-    # header path syntax: "Top > Child > Target"
-    if ">" in header:
-        target_path = " > ".join([part.strip() for part in header.split(">") if part.strip()])
-        target_norm = _normalize_heading(target_path)
-        matches = [e for e in heading_entries if _normalize_heading(e["path"]) == target_norm]
-    else:
-        target_norm = _normalize_heading(header)
+    if len(normalized_parts) == 1:
+        target_norm = normalized_parts[0]
         matches = [e for e in heading_entries if _normalize_heading(e["title"]) == target_norm]
+    else:
+        def _entry_path_parts(entry: dict[str, Any]) -> list[str]:
+            return [_normalize_heading(part) for part in str(entry["path"]).split(" > ")]
+        matches = [e for e in heading_entries if _entry_path_parts(e) == normalized_parts]
 
     if not matches:
-        raise ValueError(f"Requested header not found: {header}")
+        raise ValueError(f"Requested header_path not found: {header_path}")
 
     # If duplicate names are matched with plain header, return all matched sections.
     targets = matches
@@ -245,9 +247,43 @@ def _truncate(text: str, limit: int) -> tuple[str, bool]:
     return f"{clipped}\n\n...(truncated)", True
 
 
+def _format_page_markdown(
+    title: str,
+    version: str | None,
+    last_modified: str | None,
+    section_path: list[str] | None,
+    toc: str | None,
+    content: str,
+    toc_only: bool,
+) -> str:
+    section_repr = " > ".join(section_path) if section_path else ""
+    yaml_header = [
+        "---",
+        f"title: {title}",
+        f"version: {version or ''}",
+        f"last_modified: {last_modified or ''}",
+        f"toc_only: {str(toc_only).lower()}",
+        f"section_path: {section_repr}",
+        "---",
+    ]
+    body_parts: list[str] = []
+    if toc:
+        body_parts.append("## TOC")
+        body_parts.append(toc)
+    if not toc_only:
+        body_parts.append("## Content")
+        body_parts.append(content)
+    return "\n".join(yaml_header + [""] + body_parts).strip()
+
+
 @mcp.tool()
 async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """Run CQL search in a specific space.
+    """문서 탐색 시작점용 검색 도구.
+
+    권장 사용:
+    - 먼저 넓게 검색해 후보 페이지를 찾고(page id/title/url),
+    - 이후 `read_page`로 본문 확인,
+    - 필요시 `list_page_children`/`get_page_ancestors`로 문맥 확장.
 
     Quick CQL recipes (pass only this right-hand CQL expression; this tool prepends `space = <space_key> AND type = "page"`):
 
@@ -299,15 +335,26 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
             )
         )
     result = SearchResult(items=items, next_cursor=_next_cursor(data))
-    return result.model_dump(exclude_none=True)
+    payload = result.model_dump(exclude_none=True)
+    bullet_lines = [f"- `{item.page_id}` [{item.title}]({item.url})" if item.url else f"- `{item.page_id}` {item.title}" for item in items]
+    payload["markdown"] = "\n".join(["## Search Results", *bullet_lines]) if bullet_lines else "## Search Results\n- (empty)"
+    return payload
 
 
 @mcp.tool()
-async def read_page(page_id: str, header: str | None = None, max_chars: int | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """Read a page as Markdown. Optionally provide `header` for section focus.
+async def read_page(
+    page_id: str,
+    header_path: list[str] | None = None,
+    toc_only: bool = False,
+    max_chars: int | None = None,
+    ctx: Context | None = None,
+) -> dict[str, Any]:
+    """문서 이해/요약 단계용 읽기 도구.
 
-    `header` supports either plain heading text or hierarchical path syntax: "Top > Child > Target".
-    If duplicate heading names exist for plain header input, all matched sections are returned.
+    권장 사용:
+    - 문서 윤곽만 볼 때: `toc_only=true`
+    - 특정 섹션만 볼 때: `header_path=[\"상위\", \"하위\"]`
+    - 중복 헤더 이름만 주면 해당 섹션들을 모두 반환
     """
     client = _client_from_context(ctx)
 
@@ -335,12 +382,19 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
             final_cache_file.write_text(raw_markdown, encoding="utf-8")
 
     toc = _build_toc(raw_markdown)
-    selected = _extract_section(raw_markdown, header) if header else raw_markdown
+    selected = _extract_section(raw_markdown, header_path) if header_path else raw_markdown
 
     limit = max_chars or int(os.getenv("MAX_MARKDOWN_CHARS", "12000"))
     truncated_body, truncated = _truncate(selected, limit)
-
-    final_body = f"{toc}\n\n{truncated_body}" if toc else truncated_body
+    final_body = _format_page_markdown(
+        title=page_data.get("title") or "(untitled)",
+        version=str(version_no) if version_no is not None else None,
+        last_modified=((page_data.get("version") or {}).get("createdAt")),
+        section_path=header_path,
+        toc=toc or None,
+        content=truncated_body,
+        toc_only=toc_only,
+    )
 
     result = PageContent(
         page_id=str(page_data.get("id", page_id)),
@@ -348,7 +402,7 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
         version=str(version_no) if version_no is not None else None,
         body_markdown=final_body,
         toc_markdown=toc or None,
-        section=header,
+        section=" > ".join(header_path) if header_path else None,
         truncated=truncated,
         cache_hit=cache_hit,
         last_modified=((page_data.get("version") or {}).get("createdAt")),
@@ -358,7 +412,7 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
 
 @mcp.tool()
 async def list_page_children(page_id: str, limit: int = 50, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """List direct children of a page with parent title included."""
+    """현재 문서 기준 하위 문서 탐색 도구(직계 depth=1)."""
     client = _client_from_context(ctx)
     data = await client.list_page_children(page_id=page_id, limit=limit, cursor=cursor)
 
@@ -369,22 +423,28 @@ async def list_page_children(page_id: str, limit: int = 50, cursor: str | None =
         ChildPageItem(page_id=str(c.get("id", "")), title=c.get("title", "(untitled)"))
         for c in data.get("results", [])
     ]
-    return ChildPageListResult(
+    payload = ChildPageListResult(
         parent_page_id=page_id,
         parent_title=parent_title,
         items=items,
         next_cursor=_next_cursor(data),
     ).model_dump(exclude_none=True)
+    child_lines = [f"- `{item.page_id}` {item.title}" for item in items]
+    payload["markdown"] = "\n".join([f"## Children of {parent_title or page_id}", *child_lines]) if child_lines else f"## Children of {parent_title or page_id}\n- (empty)"
+    return payload
 
 
 @mcp.tool()
 async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[str, Any]:
-    """Get breadcrumb ancestors for a page."""
+    """문서의 상위 경로(breadcrumb) 파악 도구."""
     client = _client_from_context(ctx)
     data = await client.get_page_ancestors(page_id)
 
     breadcrumb = [AncestorItem(page_id=str(a.get("id", "")), title=a.get("title", "(untitled)")) for a in data.get("results", [])]
-    return AncestorResult(page_id=page_id, breadcrumb=breadcrumb).model_dump(exclude_none=True)
+    payload = AncestorResult(page_id=page_id, breadcrumb=breadcrumb).model_dump(exclude_none=True)
+    crumb = " > ".join([item.title for item in breadcrumb]) if breadcrumb else "(no ancestors)"
+    payload["markdown"] = f"## Ancestor Path\n{crumb}"
+    return payload
 
 
 def main() -> None:
