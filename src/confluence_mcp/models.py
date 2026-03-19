@@ -25,7 +25,6 @@ class PageContent(BaseModel):
     truncated: bool = False
     cache_hit: bool = False
     last_modified: str | None = None
-    author: str | None = None
 
 
 class ChildPageListResult(BaseModel):

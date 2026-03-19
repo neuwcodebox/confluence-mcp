@@ -294,7 +294,6 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
         truncated=truncated,
         cache_hit=cache_hit,
         last_modified=((page_data.get("version") or {}).get("createdAt")),
-        author=(((page_data.get("version") or {}).get("author") or {}).get("displayName")),
     )
     return result.model_dump()
 
