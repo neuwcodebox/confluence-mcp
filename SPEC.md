@@ -41,7 +41,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - `.env` is loaded before in-memory cache initialization so `IN_MEMORY_CACHE_*` values are applied at startup.
 
 ## Pagination cursor normalization
-- Parse `_links.next` and return only the `cursor` token in tool responses.
+- Parse `_links.next` and return pagination token in tool responses (`cursor` for v2, `start` for v1).
 - Clients can pass returned token back to `cursor` directly.
 
 ## Content normalization

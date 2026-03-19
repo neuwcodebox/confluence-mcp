@@ -112,6 +112,11 @@ def _next_cursor(payload: dict[str, Any]) -> str | None:
     if cursor_values and cursor_values[0]:
         return cursor_values[0]
 
+    # v1 fallback: start-offset based pagination
+    start_values = query.get("start")
+    if start_values and start_values[0]:
+        return start_values[0]
+
     # fallback: when API already returns plain token
     if "?" not in raw_next and "&" not in raw_next and "/" not in raw_next:
         return raw_next
