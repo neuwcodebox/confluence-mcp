@@ -28,6 +28,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Default size: 1000 entries.
 - Env overrides: `IN_MEMORY_CACHE_TTL_SECONDS`, `IN_MEMORY_CACHE_SIZE`.
 - In-memory API cache key includes a SHA-256 hash-derived token identifier + request path + params (base URL excluded as runtime-constant).
+- `.env` is loaded before in-memory cache initialization so `IN_MEMORY_CACHE_*` values are applied at startup.
 
 ## Pagination cursor normalization
 - Parse `_links.next` and return only the `cursor` token in tool responses.

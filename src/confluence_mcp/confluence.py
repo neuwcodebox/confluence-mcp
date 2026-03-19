@@ -10,6 +10,7 @@ from threading import RLock
 from typing import Any
 
 import httpx
+from dotenv import load_dotenv
 from markdownify import markdownify as md
 
 
@@ -53,6 +54,9 @@ class TTLRUCache:
             self._data.move_to_end(key)
             while len(self._data) > self.max_size:
                 self._data.popitem(last=False)
+
+
+load_dotenv()
 
 
 API_CACHE = TTLRUCache(
