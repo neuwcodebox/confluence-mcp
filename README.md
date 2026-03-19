@@ -50,7 +50,7 @@ All tools include a human-readable `markdown` field (or markdown-formatted main 
 
 - `search_space_cql`: searches only page-type contents in a given `space_key` with CQL and returns absolute page URLs.
 - `list_page_children`: returns direct children of a page and always includes parent title.
-- `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view. `header_path` supports array-based hierarchical syntax (e.g., `["Top", "Child", "Target"]`). If a single name is duplicated, all matched sections are returned. Supports `toc_only` for quick document overview.
+- `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view. `header_path` supports array-based hierarchical syntax (e.g., `["Top", "Child", "Target"]`). If a single name is duplicated, all matched sections are returned. For quick skim, set `header_path=["Table of Contents"]`.
 - `get_page_ancestors`: returns page breadcrumb lineage.
 
 

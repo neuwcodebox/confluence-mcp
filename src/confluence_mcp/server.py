@@ -206,7 +206,7 @@ def _extract_section(markdown_text: str, header_path: list[str]) -> str:
     if not matches:
         raise ValueError(f"Requested header_path not found: {header_path}")
 
-    # If duplicate names are matched with plain header, return all matched sections.
+    # Return all matches (duplicate titles or duplicate full paths).
     targets = matches
 
     sections: list[str] = []
@@ -254,7 +254,6 @@ def _format_page_markdown(
     section_path: list[str] | None,
     toc: str | None,
     content: str,
-    toc_only: bool,
 ) -> str:
     section_repr = " > ".join(section_path) if section_path else ""
     yaml_header = [
@@ -262,7 +261,6 @@ def _format_page_markdown(
         f"title: {title}",
         f"version: {version or ''}",
         f"last_modified: {last_modified or ''}",
-        f"toc_only: {str(toc_only).lower()}",
         f"section_path: {section_repr}",
         "---",
     ]
@@ -270,9 +268,8 @@ def _format_page_markdown(
     if toc:
         body_parts.append("## TOC")
         body_parts.append(toc)
-    if not toc_only:
-        body_parts.append("## Content")
-        body_parts.append(content)
+    body_parts.append("## Content")
+    body_parts.append(content)
     return "\n".join(yaml_header + [""] + body_parts).strip()
 
 
@@ -345,14 +342,13 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
 async def read_page(
     page_id: str,
     header_path: list[str] | None = None,
-    toc_only: bool = False,
     max_chars: int | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
     """문서 이해/요약 단계용 읽기 도구.
 
     권장 사용:
-    - 문서 윤곽만 볼 때: `toc_only=true`
+    - 문서 윤곽만 볼 때: `header_path=["Table of Contents"]`
     - 특정 섹션만 볼 때: `header_path=[\"상위\", \"하위\"]`
     - 중복 헤더 이름만 주면 해당 섹션들을 모두 반환
     """
@@ -382,7 +378,8 @@ async def read_page(
             final_cache_file.write_text(raw_markdown, encoding="utf-8")
 
     toc = _build_toc(raw_markdown)
-    selected = _extract_section(raw_markdown, header_path) if header_path else raw_markdown
+    toc_path_requested = bool(header_path) and len(header_path) == 1 and _normalize_heading(header_path[0]) == _normalize_heading("Table of Contents")
+    selected = toc if toc_path_requested else (_extract_section(raw_markdown, header_path) if header_path else raw_markdown)
 
     limit = max_chars or int(os.getenv("MAX_MARKDOWN_CHARS", "12000"))
     truncated_body, truncated = _truncate(selected, limit)
@@ -393,7 +390,6 @@ async def read_page(
         section_path=header_path,
         toc=toc or None,
         content=truncated_body,
-        toc_only=toc_only,
     )
 
     result = PageContent(

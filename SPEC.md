@@ -55,7 +55,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 ## Section-focused read (`read_page`)
 - Optional `header_path` argument to return one section (`["Top", "Child", "Target"]`).
 - If `header_path` has one name and duplicates exist, all matched sections are returned (each includes matched header path).
-- Optional `toc_only` argument returns TOC-focused output for quick skim.
+- For TOC-only skim, pass `header_path=["Table of Contents"]`.
 - Nested sub-headers are preserved as headings but body is collapsed:
 
 ```md
@@ -83,7 +83,7 @@ Body
    - Input: `page_id`, `limit`, `cursor`
    - Output: parent title + direct child pages
 3. `read_page`
-   - Input: `page_id`, `header_path?`, `toc_only?`, `max_chars?`
+   - Input: `page_id`, `header_path?`, `max_chars?`
    - Output: title/body markdown(+TOC), version, cache hit, truncation info
 4. `get_page_ancestors`
    - Input: `page_id`
