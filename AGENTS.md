@@ -11,7 +11,7 @@
 - Add TOC and truncation (`MAX_MARKDOWN_CHARS`) for large page content.
 - Maintain in-memory cache defaults: TTL 1800s, size 1000 (unless overridden by env).
 - Keep toolset compact and non-overlapping.
-- Include and maintain a CQL example tool so AI clients can bootstrap CQL usage.
+- Keep CQL examples inside `search_space_cql` tool description instead of separate tools.
 - Apply in-memory LRU+TTL cache to API responses (default TTL 30 minutes, size 1000).
 
 ## Maintenance checklist

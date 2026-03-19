@@ -24,8 +24,7 @@ uv run confluence-mcp
 
 ## Tooling
 
-- `get_cql_examples`: provides practical CQL templates for AI clients that do not know CQL syntax.
-- `search_space_cql`: searches pages in a given `space_key` with CQL.
+- `search_space_cql`: searches pages in a given `space_key` with CQL (includes CQL examples in tool description).
 - `list_page_children`: returns direct children of a page and always includes parent title.
 - `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view.
 - `get_page_ancestors`: returns page breadcrumb lineage.

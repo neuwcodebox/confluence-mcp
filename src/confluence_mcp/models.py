@@ -44,13 +44,3 @@ class AncestorResult(BaseModel):
     page_id: str
     breadcrumb: list[AncestorItem] = Field(default_factory=list)
 
-
-class CQLExample(BaseModel):
-    label: str
-    query: str
-    description: str
-
-
-class CQLExamplesResult(BaseModel):
-    docs_url: str
-    examples: list[CQLExample]

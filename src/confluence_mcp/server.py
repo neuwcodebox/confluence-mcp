@@ -16,8 +16,6 @@ from confluence_mcp.confluence import (
 from confluence_mcp.models import (
     AncestorItem,
     AncestorResult,
-    CQLExample,
-    CQLExamplesResult,
     ChildPageListResult,
     PageContent,
     PageSummary,
@@ -26,8 +24,6 @@ from confluence_mcp.models import (
 
 mcp = FastMCP("confluence-mcp")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
-CQL_DOCS_URL = "https://developer.atlassian.com/server/confluence/advanced-searching-using-cql/"
-
 
 def _header_map(ctx: Context | None) -> dict[str, str]:
     if ctx is None:
@@ -156,21 +152,15 @@ def _truncate(text: str, limit: int) -> tuple[str, bool]:
 
 
 @mcp.tool()
-def get_cql_examples() -> dict[str, Any]:
-    """Provide practical CQL examples for AI clients that do not know CQL syntax."""
-    examples = [
-        CQLExample(label="Pages in a space", query='space = DEV AND type = "page"', description="List all pages in DEV space."),
-        CQLExample(label="Title contains keyword", query='space = DEV AND title ~ "release"', description="Find pages with 'release' in the title."),
-        CQLExample(label="Recent updates", query='space = DEV AND lastmodified >= "2024/01/01" ORDER BY lastmodified DESC', description="Fetch recently updated pages."),
-        CQLExample(label="By creator", query='space = DEV AND creator = currentUser()', description="Find pages created by current user."),
-        CQLExample(label="Exclude archived labels", query='space = DEV AND label NOT IN (archived,obsolete)', description="Exclude pages with archived-like labels."),
-    ]
-    return CQLExamplesResult(docs_url=CQL_DOCS_URL, examples=examples).model_dump()
-
-
-@mcp.tool()
 async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """Run CQL search in a specific space."""
+    """Run CQL search in a specific space.
+
+    CQL examples:
+    - title contains keyword: title ~ "release"
+    - recently updated: lastmodified >= "2024/01/01" ORDER BY lastmodified DESC
+    - created by me: creator = currentUser()
+    - exclude labels: label NOT IN (archived,obsolete)
+    """
     client = _client_from_context(ctx)
     data = await client.search_space_cql(space_key=space_key, cql=cql, limit=limit, cursor=cursor)
 

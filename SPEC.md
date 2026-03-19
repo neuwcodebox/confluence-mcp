@@ -41,24 +41,17 @@ Body
 (collapsed)
 ```
 
-## CQL assistance
-- Provide a dedicated tool (`get_cql_examples`) with practical CQL examples.
-- Source reference: Atlassian CQL guide.
-  - https://developer.atlassian.com/server/confluence/advanced-searching-using-cql/
-
 ## Tool list
-1. `get_cql_examples`
-   - Output: docs URL + example CQL templates.
-2. `search_space_cql`
+1. `search_space_cql`
    - Input: `space_key`, `cql`, `limit`, `cursor`
    - Output: page id/title/url/excerpt (markdown), next cursor
-3. `list_page_children`
+2. `list_page_children`
    - Input: `page_id`, `limit`, `cursor`
    - Output: parent title + direct child pages
-4. `read_page`
+3. `read_page`
    - Input: `page_id`, `header?`, `max_chars?`
    - Output: title/body markdown(+TOC), version, cache hit, truncation info
-5. `get_page_ancestors`
+4. `get_page_ancestors`
    - Input: `page_id`
    - Output: breadcrumb lineage
 
