@@ -2,7 +2,7 @@ from __future__ import annotations
 
 import os
 import re
-from urllib.parse import parse_qs, urlparse, urljoin
+from urllib.parse import parse_qs, urlparse
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
@@ -132,7 +132,17 @@ def _absolute_webui_url(base_url: str, maybe_relative: str | None) -> str | None
         return None
     if maybe_relative.startswith("http://") or maybe_relative.startswith("https://"):
         return maybe_relative
-    return urljoin(base_url.rstrip("/") + "/", maybe_relative)
+    base = urlparse(base_url)
+    base_origin = f"{base.scheme}://{base.netloc}"
+    base_path = base.path.rstrip("/")
+    rel = maybe_relative.strip()
+    if not rel.startswith("/"):
+        rel = f"/{rel}"
+
+    # Preserve /wiki-like base path for relative webui links.
+    if base_path and not rel.startswith(base_path + "/") and rel != base_path:
+        return f"{base_origin}{base_path}{rel}"
+    return f"{base_origin}{rel}"
 
 def _normalize_heading(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).casefold()
@@ -256,7 +266,14 @@ def _to_tool_result(structured: dict[str, Any], markdown_text: str) -> CallToolR
 
 
 @mcp.tool()
-async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> CallToolResult:
+async def search_space_cql(
+    space_key: str,
+    cql: str,
+    limit: int = 10,
+    cursor: str | None = None,
+    order_by: str | None = None,
+    ctx: Context | None = None,
+) -> CallToolResult:
     """Search entry-point for wiki exploration.
 
     Recommended flow:
@@ -264,7 +281,7 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
     - Inspect content with `read_page`,
     - Expand local/global context with `list_page_children` and `get_page_ancestors`.
 
-    Quick CQL recipes (pass only this right-hand CQL expression; this tool prepends `space = <space_key> AND type = "page"`):
+    Quick CQL recipes (pass only filter expression in `cql`; use `order_by` for sorting):
 
     1) All pages
        type = "page"
@@ -276,7 +293,8 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
        text ~ "runbook"
 
     4) Recently updated first
-       lastmodified >= "2024/01/01" ORDER BY lastmodified DESC
+       cql: lastmodified >= "2024/01/01"
+       order_by: lastmodified DESC
 
     5) Created by current user
        creator = currentUser()
@@ -291,7 +309,8 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
        lastmodified < startOfYear() OR label = needs_review
 
     9) Ordered list with tie-breaker
-       type = "page" ORDER BY created DESC, title ASC
+       cql: type = "page"
+       order_by: created DESC, title ASC
 
     Tips:
     - Use double quotes for phrases/date strings.
@@ -299,7 +318,7 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
     - Combine conditions with AND/OR and parentheses explicitly.
     """
     client = _client_from_context(ctx)
-    data = await client.search_space_cql(space_key=space_key, cql=cql, limit=limit, cursor=cursor)
+    data = await client.search_space_cql(space_key=space_key, cql=cql, limit=limit, cursor=cursor, order_by=order_by)
 
     items: list[PageSummary] = []
     for row in data.get("results", []):

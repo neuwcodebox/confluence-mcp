@@ -8,6 +8,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
 from typing import Any
+from urllib.parse import parse_qs, urlparse
 
 import httpx
 from dotenv import load_dotenv
@@ -93,6 +94,24 @@ class ConfluenceClient:
             raise ValueError("CONFLUENCE_API_VERSION must be 'v1' or 'v2'.")
         return cls(base_url=base_url, token=token, api_version=api_version)
 
+    @staticmethod
+    def _compose_search_cql(space_key: str, cql: str, order_by: str | None = None) -> str:
+        cql_text = cql.strip()
+        extracted_order: str | None = None
+
+        # Backward-compatible: if caller included ORDER BY inside cql, split it out.
+        upper = cql_text.upper()
+        idx = upper.rfind(" ORDER BY ")
+        if idx >= 0:
+            extracted_order = cql_text[idx + len(" ORDER BY "):].strip()
+            cql_text = cql_text[:idx].strip()
+
+        effective_order = (order_by or extracted_order or "").strip()
+        base = f'space = {space_key} AND type = "page" AND ({cql_text})'
+        if effective_order:
+            return f"{base} ORDER BY {effective_order}"
+        return base
+
     async def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
         params = params or {}
@@ -124,17 +143,25 @@ class ConfluenceClient:
         except ValueError:
             return 0
 
-    async def search_space_cql(self, space_key: str, cql: str, limit: int, cursor: str | None) -> dict[str, Any]:
+    async def search_space_cql(
+        self,
+        space_key: str,
+        cql: str,
+        limit: int,
+        cursor: str | None,
+        order_by: str | None = None,
+    ) -> dict[str, Any]:
+        query_cql = self._compose_search_cql(space_key=space_key, cql=cql, order_by=order_by)
         if self.api_version == "v1":
             params: dict[str, Any] = {
-                "cql": f"space = {space_key} AND type = \"page\" AND ({cql})",
+                "cql": query_cql,
                 "limit": limit,
                 "start": self._cursor_to_start(cursor),
             }
             return await self._request("/rest/api/search", params=params)
 
         params = {
-            "cql": f"space = {space_key} AND type = \"page\" AND ({cql})",
+            "cql": query_cql,
             "limit": limit,
         }
         if cursor:
@@ -191,12 +218,13 @@ class ConfluenceClient:
                 f"/rest/api/content/{page_id}/child/page",
                 params={"limit": limit, "start": start},
             )
-            size = int(raw.get("size") or 0)
-            next_start = start + size
             links = raw.get("_links") or {}
             # normalize to cursor token-like form
             if links.get("next"):
-                links = {**links, "next": str(next_start)}
+                parsed = urlparse(str(links.get("next")))
+                start_values = parse_qs(parsed.query).get("start")
+                if start_values and start_values[0]:
+                    links = {**links, "next": str(start_values[0])}
             return {
                 "results": raw.get("results", []),
                 "_links": links,
