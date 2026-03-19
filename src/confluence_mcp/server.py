@@ -92,12 +92,7 @@ def _confluence_token(ctx: Context | None) -> str:
     if env_token:
         return env_token
 
-    # Backward-compatible alias for deployments using "Confluence Key" naming
-    env_key = os.getenv("CONFLUENCE_KEY", "").strip()
-    if env_key:
-        return env_key
-
-    raise ConfluenceAuthError("Confluence token missing. Provide X-Confluence-Token header or CONFLUENCE_TOKEN/CONFLUENCE_KEY.")
+    raise ConfluenceAuthError("Confluence token missing. Provide X-Confluence-Token header or CONFLUENCE_TOKEN.")
 
 
 def _client_from_context(ctx: Context | None) -> ConfluenceClient:

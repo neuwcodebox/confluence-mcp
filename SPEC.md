@@ -20,7 +20,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 1. **MCP server access auth**
    - Validate `Authorization` header against `MCP_AUTH_KEY` (if set).
 2. **Confluence API auth**
-   - Token priority: `X-Confluence-Token` header > `CONFLUENCE_TOKEN` env > `CONFLUENCE_KEY` env(alias).
+   - Token priority: `X-Confluence-Token` header > `CONFLUENCE_TOKEN` env.
    - If both are missing, return an auth error.
 
 ## Caching

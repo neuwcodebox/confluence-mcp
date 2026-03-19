@@ -6,7 +6,7 @@
 - Keep Python >= 3.11.
 - Implement server with MCP Python SDK (`mcp`).
 - Use `Authorization` only for MCP access key (`MCP_AUTH_KEY`) validation.
-- Use `X-Confluence-Token` first for Confluence auth, then `CONFLUENCE_TOKEN` (or alias `CONFLUENCE_KEY`) fallback.
+- Use `X-Confluence-Token` first for Confluence auth, then `CONFLUENCE_TOKEN` fallback.
 - Support Confluence API version selection via `CONFLUENCE_API_VERSION` (`v1`/`v2`).
 - For TLS issues, support `CONFLUENCE_SSL_VERIFY` / `CONFLUENCE_CA_BUNDLE` instead of hardcoding insecure behavior.
 - Convert Confluence HTML to Markdown before returning tool results.
