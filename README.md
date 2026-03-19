@@ -29,6 +29,19 @@ uv run confluence-mcp
 - `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view.
 - `get_page_ancestors`: returns page breadcrumb lineage.
 
+
+### search_space_cql quick examples
+
+These go into the `cql` argument (the tool automatically adds `space = <space_key>`):
+
+- `type = "page"`
+- `title ~ "release"`
+- `text ~ "runbook"`
+- `lastmodified >= "2024/01/01" ORDER BY lastmodified DESC`
+- `creator = currentUser()`
+- `label NOT IN (archived,obsolete)`
+- `(type = "page" AND title ~ "api") OR (type = "blogpost" AND creator = currentUser())`
+
 ## Caching and content shaping
 
 - Uses in-memory LRU+TTL cache for Confluence API responses (default: 1000 entries, 1800s TTL).

@@ -25,6 +25,7 @@ from confluence_mcp.models import (
 mcp = FastMCP("confluence-mcp")
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 
+
 def _header_map(ctx: Context | None) -> dict[str, str]:
     if ctx is None:
         return {}
@@ -155,11 +156,39 @@ def _truncate(text: str, limit: int) -> tuple[str, bool]:
 async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
     """Run CQL search in a specific space.
 
-    CQL examples:
-    - title contains keyword: title ~ "release"
-    - recently updated: lastmodified >= "2024/01/01" ORDER BY lastmodified DESC
-    - created by me: creator = currentUser()
-    - exclude labels: label NOT IN (archived,obsolete)
+    Quick CQL recipes (pass only this right-hand CQL expression; this tool prepends `space = <space_key>`):
+
+    1) All pages
+       type = "page"
+
+    2) Title contains keyword
+       title ~ "release"
+
+    3) Full-text contains term
+       text ~ "runbook"
+
+    4) Recently updated first
+       lastmodified >= "2024/01/01" ORDER BY lastmodified DESC
+
+    5) Created by current user
+       creator = currentUser()
+
+    6) Exclude labels
+       label NOT IN (archived,obsolete)
+
+    7) Boolean + parentheses precedence
+       (type = "page" AND title ~ "api") OR (type = "blogpost" AND creator = currentUser())
+
+    8) Date function + label filter
+       lastmodified < startOfYear() OR label = needs_review
+
+    9) Ordered list with tie-breaker
+       type = "page" ORDER BY created DESC, title ASC
+
+    Tips:
+    - Use double quotes for phrases/date strings.
+    - Prefer IN / NOT IN for multi-value filters.
+    - Combine conditions with AND/OR and parentheses explicitly.
     """
     client = _client_from_context(ctx)
     data = await client.search_space_cql(space_key=space_key, cql=cql, limit=limit, cursor=cursor)

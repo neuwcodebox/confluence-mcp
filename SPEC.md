@@ -41,6 +41,15 @@ Body
 (collapsed)
 ```
 
+## CQL quick examples (for `search_space_cql.cql`)
+- `type = "page"`
+- `title ~ "release"`
+- `text ~ "runbook"`
+- `lastmodified >= "2024/01/01" ORDER BY lastmodified DESC`
+- `creator = currentUser()`
+- `label NOT IN (archived,obsolete)`
+- `(type = "page" AND title ~ "api") OR (type = "blogpost" AND creator = currentUser())`
+
 ## Tool list
 1. `search_space_cql`
    - Input: `space_key`, `cql`, `limit`, `cursor`
