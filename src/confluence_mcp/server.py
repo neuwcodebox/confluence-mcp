@@ -24,7 +24,13 @@ from confluence_mcp.models import (
     SearchResult,
 )
 
-mcp = FastMCP("confluence-mcp")
+load_dotenv()
+
+mcp = FastMCP(
+    "confluence-mcp",
+    host=os.getenv("MCP_HOST", "127.0.0.1"),
+    port=int(os.getenv("MCP_PORT", "8000")),
+)
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
 
 
@@ -316,12 +322,9 @@ async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[s
 
 
 def main() -> None:
-    load_dotenv()
     transport = os.getenv("MCP_TRANSPORT", "stdio")
     if transport == "streamable-http":
-        host = os.getenv("MCP_HOST", "127.0.0.1")
-        port = int(os.getenv("MCP_PORT", "8000"))
-        mcp.run(transport="streamable-http", host=host, port=port)
+        mcp.run(transport="streamable-http")
     else:
         mcp.run(transport="stdio")
 
