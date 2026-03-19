@@ -140,7 +140,7 @@ class ConfluenceClient:
 def html_to_markdown(value: str | None) -> str:
     if not value:
         return ""
-    return md(value, heading_style="ATX")
+    return md(value, heading_style="ATX", escape_asterisks=False, escape_underscores=False)
 
 
 def cache_dir() -> Path:
