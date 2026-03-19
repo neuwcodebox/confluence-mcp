@@ -2,6 +2,7 @@
 
 ## Working rules
 - Use **uv** for dependency management and execution.
+- Development runtime should support `.env` autoload for local setup.
 - Keep Python >= 3.11.
 - Implement server with MCP Python SDK (`mcp`).
 - Use `Authorization` only for MCP access key (`MCP_AUTH_KEY`) validation.

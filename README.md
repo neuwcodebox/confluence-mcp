@@ -11,6 +11,8 @@ uv run confluence-mcp
 
 ## Environment variables
 
+The server auto-loads a local `.env` file on startup (via `python-dotenv`) for development convenience.
+
 - `CONFLUENCE_BASE_URL` (required): e.g. `https://your-domain.atlassian.net/wiki`
 - `MCP_AUTH_KEY` (optional): server access key. If set, incoming `Authorization` header must match this value.
 - `CONFLUENCE_TOKEN` (optional): default Confluence API token. `X-Confluence-Token` request header takes precedence.
@@ -21,6 +23,19 @@ uv run confluence-mcp
 - `MCP_TRANSPORT` (optional): `stdio` or `streamable-http` (Docker default: `streamable-http`)
 - `MCP_HOST` (optional): host for HTTP mode (`127.0.0.1`, Docker default `0.0.0.0`)
 - `MCP_PORT` (optional): port for HTTP mode (`8000`)
+
+### .env support
+
+Example `.env`:
+
+```dotenv
+CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
+MCP_AUTH_KEY=your-mcp-auth-key
+CONFLUENCE_TOKEN=your-default-confluence-token
+MCP_TRANSPORT=streamable-http
+MCP_HOST=0.0.0.0
+MCP_PORT=8000
+```
 
 ## Tooling
 

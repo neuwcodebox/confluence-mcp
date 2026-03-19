@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
+from dotenv import load_dotenv
 
 from confluence_mcp.confluence import (
     ConfluenceAuthError,
@@ -300,6 +301,7 @@ async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[s
 
 
 def main() -> None:
+    load_dotenv()
     transport = os.getenv("MCP_TRANSPORT", "stdio")
     if transport == "streamable-http":
         host = os.getenv("MCP_HOST", "127.0.0.1")

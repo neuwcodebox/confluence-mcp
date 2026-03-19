@@ -3,6 +3,10 @@
 ## Goals
 Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wiki content efficiently.
 
+## Development env loading
+- On startup, server loads `.env` automatically (development convenience).
+- Explicit process environment variables still take precedence.
+
 ## Authentication
 1. **MCP server access auth**
    - Validate `Authorization` header against `MCP_AUTH_KEY` (if set).
