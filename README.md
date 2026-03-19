@@ -16,6 +16,7 @@ The server auto-loads a local `.env` file on startup (via `python-dotenv`) for d
 - `CONFLUENCE_BASE_URL` (required): e.g. `https://your-domain.atlassian.net/wiki`
 - `MCP_AUTH_KEY` (optional): server access key. If set, incoming `Authorization` header must match this value.
 - `CONFLUENCE_TOKEN` (optional): default Confluence API token. `X-Confluence-Token` request header takes precedence.
+- `CONFLUENCE_API_VERSION` (optional): `v2` (default) or `v1` for legacy Confluence instances.
 - `CONFLUENCE_SSL_VERIFY` (optional): TLS cert verification toggle (`true` default, set `false` to disable).
 - `CONFLUENCE_CA_BUNDLE` (optional): path to a custom CA bundle file for TLS verification.
 - `CONFLUENCE_CACHE_DIR` (optional): markdown cache directory (default `/data/cache`)
@@ -34,6 +35,7 @@ Example `.env`:
 CONFLUENCE_BASE_URL=https://your-domain.atlassian.net/wiki
 MCP_AUTH_KEY=your-mcp-auth-key
 CONFLUENCE_TOKEN=your-default-confluence-token
+CONFLUENCE_API_VERSION=v2
 MCP_TRANSPORT=streamable-http
 MCP_HOST=0.0.0.0
 MCP_PORT=8000

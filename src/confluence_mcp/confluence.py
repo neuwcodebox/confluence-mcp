@@ -77,9 +77,10 @@ def _http_verify_option() -> bool | str:
 
 
 class ConfluenceClient:
-    def __init__(self, base_url: str, token: str) -> None:
+    def __init__(self, base_url: str, token: str, api_version: str) -> None:
         self.base_url = base_url.rstrip("/")
         self.token = token
+        self.api_version = api_version
         self._token_cache_id = hashlib.sha256(token.encode("utf-8")).hexdigest()
 
     @classmethod
@@ -87,12 +88,15 @@ class ConfluenceClient:
         base_url = os.getenv("CONFLUENCE_BASE_URL", "").strip()
         if not base_url:
             raise ValueError("CONFLUENCE_BASE_URL environment variable is required.")
-        return cls(base_url=base_url, token=token)
+        api_version = os.getenv("CONFLUENCE_API_VERSION", "v2").strip().lower()
+        if api_version not in {"v1", "v2"}:
+            raise ValueError("CONFLUENCE_API_VERSION must be 'v1' or 'v2'.")
+        return cls(base_url=base_url, token=token, api_version=api_version)
 
     async def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
         params = params or {}
-        cache_key = f"{self._token_cache_id}|{path}|{sorted(params.items())}"
+        cache_key = f"{self.api_version}|{self._token_cache_id}|{path}|{sorted(params.items())}"
         cached = API_CACHE.get(cache_key)
         if cached is not None:
             return cached
@@ -111,7 +115,24 @@ class ConfluenceClient:
         API_CACHE.set(cache_key, payload)
         return payload
 
+    @staticmethod
+    def _cursor_to_start(cursor: str | None) -> int:
+        if not cursor:
+            return 0
+        try:
+            return int(cursor)
+        except ValueError:
+            return 0
+
     async def search_space_cql(self, space_key: str, cql: str, limit: int, cursor: str | None) -> dict[str, Any]:
+        if self.api_version == "v1":
+            params: dict[str, Any] = {
+                "cql": f"space = {space_key} AND type = \"page\" AND ({cql})",
+                "limit": limit,
+                "start": self._cursor_to_start(cursor),
+            }
+            return await self._request("/rest/api/search", params=params)
+
         params = {
             "cql": f"space = {space_key} AND type = \"page\" AND ({cql})",
             "limit": limit,
@@ -121,16 +142,41 @@ class ConfluenceClient:
         return await self._request("/rest/api/search", params=params)
 
     async def get_page_tree_children(self, page_id: str, limit: int, cursor: str | None = None) -> dict[str, Any]:
-        params: dict[str, Any] = {"limit": limit}
-        if cursor:
-            params["cursor"] = cursor
-        return await self._request(f"/api/v2/pages/{page_id}/children", params=params)
+        return await self.list_page_children(page_id=page_id, limit=limit, cursor=cursor)
+
+    async def _get_content_v1(self, page_id: str, expand: str) -> dict[str, Any]:
+        return await self._request(f"/rest/api/content/{page_id}", params={"expand": expand})
+
+    @staticmethod
+    def _normalize_v1_page(page: dict[str, Any], include_body: bool) -> dict[str, Any]:
+        version = page.get("version") or {}
+        author = version.get("by") or {}
+        normalized: dict[str, Any] = {
+            "id": page.get("id"),
+            "title": page.get("title"),
+            "version": {
+                "number": version.get("number"),
+                "createdAt": version.get("when"),
+                "author": {"displayName": author.get("displayName")},
+            },
+        }
+        if include_body:
+            body_storage = ((page.get("body") or {}).get("storage") or {})
+            normalized["body"] = {"storage": {"value": body_storage.get("value") or ""}}
+        return normalized
 
     async def get_page_version(self, page_id: str) -> dict[str, Any]:
+        if self.api_version == "v1":
+            raw = await self._get_content_v1(page_id, expand="version")
+            return self._normalize_v1_page(raw, include_body=False)
         params = {"include-version": "true"}
         return await self._request(f"/api/v2/pages/{page_id}", params=params)
 
     async def read_page_with_body(self, page_id: str) -> dict[str, Any]:
+        if self.api_version == "v1":
+            raw = await self._get_content_v1(page_id, expand="body.storage,version")
+            return self._normalize_v1_page(raw, include_body=True)
+
         params = {
             "body-format": "storage",
             "include-version": "true",
@@ -139,12 +185,33 @@ class ConfluenceClient:
         return await self._request(f"/api/v2/pages/{page_id}", params=params)
 
     async def list_page_children(self, page_id: str, limit: int, cursor: str | None) -> dict[str, Any]:
+        if self.api_version == "v1":
+            start = self._cursor_to_start(cursor)
+            raw = await self._request(
+                f"/rest/api/content/{page_id}/child/page",
+                params={"limit": limit, "start": start},
+            )
+            size = int(raw.get("size") or 0)
+            next_start = start + size
+            links = raw.get("_links") or {}
+            # normalize to cursor token-like form
+            if links.get("next"):
+                links = {**links, "next": str(next_start)}
+            return {
+                "results": raw.get("results", []),
+                "_links": links,
+            }
+
         params: dict[str, Any] = {"limit": limit}
         if cursor:
             params["cursor"] = cursor
         return await self._request(f"/api/v2/pages/{page_id}/children", params=params)
 
     async def get_page_ancestors(self, page_id: str) -> dict[str, Any]:
+        if self.api_version == "v1":
+            raw = await self._request(f"/rest/api/content/{page_id}", params={"expand": "ancestors"})
+            ancestors = raw.get("ancestors") or []
+            return {"results": [{"id": a.get("id"), "title": a.get("title")} for a in ancestors]}
         return await self._request(f"/api/v2/pages/{page_id}/ancestors")
 
 

@@ -12,6 +12,10 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - `CONFLUENCE_SSL_VERIFY=false` disables certificate verification (use only when necessary).
 - `CONFLUENCE_CA_BUNDLE` can point to a custom CA bundle path.
 
+## API version mode
+- `CONFLUENCE_API_VERSION=v2` (default): use v2 page/children/ancestor endpoints.
+- `CONFLUENCE_API_VERSION=v1`: use legacy v1 content endpoints with normalized output.
+
 ## Authentication
 1. **MCP server access auth**
    - Validate `Authorization` header against `MCP_AUTH_KEY` (if set).
