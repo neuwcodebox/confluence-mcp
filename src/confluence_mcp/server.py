@@ -137,6 +137,36 @@ def _normalize_heading(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).casefold()
 
 
+
+
+def _collect_heading_entries(markdown_text: str) -> list[dict[str, Any]]:
+    entries: list[dict[str, Any]] = []
+    stack: list[str] = []
+
+    for idx, line in enumerate(markdown_text.splitlines()):
+        matched = HEADING_RE.match(line)
+        if not matched:
+            continue
+
+        level = len(matched.group(1))
+        title = matched.group(2).strip()
+
+        # keep stack depth aligned to heading level
+        while len(stack) >= level:
+            stack.pop()
+        stack.append(title)
+
+        entries.append(
+            {
+                "index": idx,
+                "level": level,
+                "title": title,
+                "path": " > ".join(stack),
+            }
+        )
+
+    return entries
+
 def _extract_headings(markdown_text: str) -> list[tuple[int, str]]:
     headings: list[tuple[int, str]] = []
     for line in markdown_text.splitlines():
@@ -160,23 +190,30 @@ def _build_toc(markdown_text: str) -> str:
 
 def _extract_section(markdown_text: str, header: str) -> str:
     lines = markdown_text.splitlines()
-    target_index = -1
-    target_level = 0
-    target_name = _normalize_heading(header)
+    heading_entries = _collect_heading_entries(markdown_text)
 
-    for idx, line in enumerate(lines):
-        matched = HEADING_RE.match(line)
-        if not matched:
-            continue
-        level = len(matched.group(1))
-        title = _normalize_heading(matched.group(2))
-        if title == target_name:
-            target_index = idx
-            target_level = level
-            break
+    # header path syntax: "Top > Child > Target"
+    if ">" in header:
+        target_path = " > ".join([part.strip() for part in header.split(">") if part.strip()])
+        target_norm = _normalize_heading(target_path)
+        matches = [e for e in heading_entries if _normalize_heading(e["path"]) == target_norm]
+    else:
+        target_norm = _normalize_heading(header)
+        matches = [e for e in heading_entries if _normalize_heading(e["title"]) == target_norm]
 
-    if target_index < 0:
+    if not matches:
         raise ValueError(f"Requested header not found: {header}")
+
+    if len(matches) > 1 and ">" not in header:
+        candidates = "\n- " + "\n- ".join([e["path"] for e in matches])
+        raise ValueError(
+            "Duplicate header name found. Please use hierarchical header path (e.g. 'A > B > C'). "
+            f"Matched paths:{candidates}"
+        )
+
+    target = matches[0]
+    target_index = int(target["index"])
+    target_level = int(target["level"])
 
     out = [lines[target_index]]
     in_nested_subsection = False
@@ -265,7 +302,11 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
 
 @mcp.tool()
 async def read_page(page_id: str, header: str | None = None, max_chars: int | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """Read a page as Markdown. Optionally provide a header to return a focused section only."""
+    """Read a page as Markdown. Optionally provide `header` for section focus.
+
+    `header` supports either plain heading text or hierarchical path syntax: "Top > Child > Target".
+    If duplicate heading names exist, tool raises guidance with candidate header paths.
+    """
     client = _client_from_context(ctx)
 
     version_data = await client.get_page_version(page_id)
