@@ -1,0 +1,21 @@
+# VCS
+.git
+.gitignore
+
+# Python cache
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+
+# Local env/secrets
+.env
+.env.*
+!.env.example
+
+# Local virtual env / caches
+.venv/
+.cache/
+
+# Runtime artifacts
+*.log
