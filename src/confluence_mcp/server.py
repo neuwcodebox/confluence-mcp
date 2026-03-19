@@ -254,18 +254,26 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
 
     version_data = await client.get_page_version(page_id)
     version_no = (version_data.get("version") or {}).get("number")
-    cache_file = cache_path(page_id, version_no if version_no is not None else "unknown")
+    initial_cache_file = cache_path(page_id, version_no if version_no is not None else "unknown")
 
     cache_hit = False
-    if cache_file.exists():
-        raw_markdown = cache_file.read_text(encoding="utf-8")
+    if initial_cache_file.exists():
+        raw_markdown = initial_cache_file.read_text(encoding="utf-8")
         page_data = version_data
         cache_hit = True
     else:
         page_data = await client.read_page_with_body(page_id)
-        body_html = ((page_data.get("body") or {}).get("storage") or {}).get("value") or ""
-        raw_markdown = html_to_markdown(body_html)
-        cache_file.write_text(raw_markdown, encoding="utf-8")
+        body_version_no = (page_data.get("version") or {}).get("number")
+        version_no = body_version_no if body_version_no is not None else version_no
+
+        final_cache_file = cache_path(page_id, version_no if version_no is not None else "unknown")
+        if final_cache_file.exists():
+            raw_markdown = final_cache_file.read_text(encoding="utf-8")
+            cache_hit = True
+        else:
+            body_html = ((page_data.get("body") or {}).get("storage") or {}).get("value") or ""
+            raw_markdown = html_to_markdown(body_html)
+            final_cache_file.write_text(raw_markdown, encoding="utf-8")
 
     toc = _build_toc(raw_markdown)
     selected = _extract_section(raw_markdown, header) if header else raw_markdown

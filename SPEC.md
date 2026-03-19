@@ -26,6 +26,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
   1. Fetch page version metadata first.
   2. If cache exists for that version, return cached markdown.
   3. Else fetch body HTML, convert markdown, save cache.
+  4. On cache miss, body is fetched and cached using the body response version to avoid cross-version race mismatch.
 
 ## In-memory API cache
 - All Confluence API GET responses use an in-memory LRU+TTL cache.
