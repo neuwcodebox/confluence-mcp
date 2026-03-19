@@ -46,7 +46,7 @@ CONFLUENCE_SSL_VERIFY=false
 
 ## Tooling
 
-All tools include a human-readable `markdown` field (or markdown-formatted main content) for efficient browsing.
+All tools return both structured JSON (`structuredContent`) and human-readable markdown text (`content`).
 
 - `search_space_cql`: searches only page-type contents in a given `space_key` with CQL and returns absolute page URLs.
 - `list_page_children`: returns direct children of a page and always includes parent title.

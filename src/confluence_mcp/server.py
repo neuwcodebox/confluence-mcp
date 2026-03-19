@@ -6,6 +6,7 @@ from urllib.parse import parse_qs, urlparse, urljoin
 from typing import Any
 
 from mcp.server.fastmcp import Context, FastMCP
+from mcp.types import CallToolResult, TextContent
 from dotenv import load_dotenv
 
 from confluence_mcp.confluence import (
@@ -181,7 +182,7 @@ def _build_toc(markdown_text: str) -> str:
     if not headings:
         return ""
 
-    lines = ["## TOC"]
+    lines: list[str] = []
     for level, title in headings:
         indent = "  " * (level - 1)
         lines.append(f"{indent}- {title}")
@@ -247,34 +248,15 @@ def _truncate(text: str, limit: int) -> tuple[str, bool]:
     return f"{clipped}\n\n...(truncated)", True
 
 
-def _format_page_markdown(
-    title: str,
-    version: str | None,
-    last_modified: str | None,
-    section_path: list[str] | None,
-    toc: str | None,
-    content: str,
-) -> str:
-    section_repr = " > ".join(section_path) if section_path else ""
-    yaml_header = [
-        "---",
-        f"title: {title}",
-        f"version: {version or ''}",
-        f"last_modified: {last_modified or ''}",
-        f"section_path: {section_repr}",
-        "---",
-    ]
-    body_parts: list[str] = []
-    if toc:
-        body_parts.append("## TOC")
-        body_parts.append(toc)
-    body_parts.append("## Content")
-    body_parts.append(content)
-    return "\n".join(yaml_header + [""] + body_parts).strip()
+def _to_tool_result(structured: dict[str, Any], markdown_text: str) -> CallToolResult:
+    return CallToolResult(
+        content=[TextContent(type="text", text=markdown_text)],
+        structuredContent=structured,
+    )
 
 
 @mcp.tool()
-async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
+async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> CallToolResult:
     """Search entry-point for wiki exploration.
 
     Recommended flow:
@@ -334,8 +316,8 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
     result = SearchResult(items=items, next_cursor=_next_cursor(data))
     payload = result.model_dump(exclude_none=True)
     bullet_lines = [f"- `{item.page_id}` [{item.title}]({item.url})" if item.url else f"- `{item.page_id}` {item.title}" for item in items]
-    payload["markdown"] = "\n".join(["## Search Results", *bullet_lines]) if bullet_lines else "## Search Results\n- (empty)"
-    return payload
+    markdown = "\n".join(["## Search Results", *bullet_lines]) if bullet_lines else "## Search Results\n- (empty)"
+    return _to_tool_result(payload, markdown)
 
 
 @mcp.tool()
@@ -344,7 +326,7 @@ async def read_page(
     header_path: list[str] | None = None,
     max_chars: int | None = None,
     ctx: Context | None = None,
-) -> dict[str, Any]:
+) -> CallToolResult:
     """Read a page as markdown for understanding/summarization.
 
     Recommended usage:
@@ -383,31 +365,29 @@ async def read_page(
 
     limit = max_chars or int(os.getenv("MAX_MARKDOWN_CHARS", "12000"))
     truncated_body, truncated = _truncate(selected, limit)
-    final_body = _format_page_markdown(
-        title=page_data.get("title") or "(untitled)",
-        version=str(version_no) if version_no is not None else None,
-        last_modified=((page_data.get("version") or {}).get("createdAt")),
-        section_path=header_path,
-        toc=toc or None,
-        content=truncated_body,
-    )
+    if toc_path_requested:
+        unstructured = f"## TOC\n{truncated_body}".strip()
+    elif toc:
+        unstructured = f"## TOC\n{toc}\n\n{truncated_body}".strip()
+    else:
+        unstructured = truncated_body
 
     result = PageContent(
         page_id=str(page_data.get("id", page_id)),
         title=page_data.get("title") or "(untitled)",
         version=str(version_no) if version_no is not None else None,
-        body_markdown=final_body,
+        body_markdown=truncated_body,
         toc_markdown=toc or None,
         section=" > ".join(header_path) if header_path else None,
         truncated=truncated,
         cache_hit=cache_hit,
         last_modified=((page_data.get("version") or {}).get("createdAt")),
     )
-    return result.model_dump(exclude_none=True)
+    return _to_tool_result(result.model_dump(exclude_none=True), unstructured)
 
 
 @mcp.tool()
-async def list_page_children(page_id: str, limit: int = 50, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
+async def list_page_children(page_id: str, limit: int = 50, cursor: str | None = None, ctx: Context | None = None) -> CallToolResult:
     """List direct child pages for local navigation context."""
     client = _client_from_context(ctx)
     data = await client.list_page_children(page_id=page_id, limit=limit, cursor=cursor)
@@ -426,12 +406,12 @@ async def list_page_children(page_id: str, limit: int = 50, cursor: str | None =
         next_cursor=_next_cursor(data),
     ).model_dump(exclude_none=True)
     child_lines = [f"- `{item.page_id}` {item.title}" for item in items]
-    payload["markdown"] = "\n".join([f"## Children of {parent_title or page_id}", *child_lines]) if child_lines else f"## Children of {parent_title or page_id}\n- (empty)"
-    return payload
+    markdown = "\n".join([f"## Children of {parent_title or page_id}", *child_lines]) if child_lines else f"## Children of {parent_title or page_id}\n- (empty)"
+    return _to_tool_result(payload, markdown)
 
 
 @mcp.tool()
-async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[str, Any]:
+async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> CallToolResult:
     """Get breadcrumb-style ancestor path for global context."""
     client = _client_from_context(ctx)
     data = await client.get_page_ancestors(page_id)
@@ -439,8 +419,7 @@ async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[s
     breadcrumb = [AncestorItem(page_id=str(a.get("id", "")), title=a.get("title", "(untitled)")) for a in data.get("results", [])]
     payload = AncestorResult(page_id=page_id, breadcrumb=breadcrumb).model_dump(exclude_none=True)
     crumb = " > ".join([item.title for item in breadcrumb]) if breadcrumb else "(no ancestors)"
-    payload["markdown"] = f"## Ancestor Path\n{crumb}"
-    return payload
+    return _to_tool_result(payload, f"## Ancestor Path\n{crumb}")
 
 
 def main() -> None:

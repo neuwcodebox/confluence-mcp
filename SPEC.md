@@ -45,7 +45,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Clients can pass returned token back to `cursor` directly.
 
 ## Content normalization
-- Every tool includes human-readable markdown text for unstructured consumption.
+- Every tool returns structured JSON plus human-readable markdown text in unstructured content.
 - Tool responses omit null/unused fields to reduce LLM token usage.
 - Always convert Confluence HTML content to Markdown.
 - Return reduced/curated JSON schema only.
