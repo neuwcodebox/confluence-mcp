@@ -14,6 +14,8 @@
 - Add TOC and truncation (`MAX_MARKDOWN_CHARS`) for large page content.
 - Maintain in-memory cache defaults: TTL 1800s, size 1000 (unless overridden by env).
 - Keep toolset compact and non-overlapping.
+- Tool function docstrings should be written in English for global users.
+- Avoid mentioning depth in `list_page_children` descriptions to prevent confusion.
 - Keep CQL examples inside `search_space_cql` tool description instead of separate tools.
 - Apply in-memory LRU+TTL cache to API responses (default TTL 30 minutes, size 1000).
 

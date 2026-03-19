@@ -275,12 +275,12 @@ def _format_page_markdown(
 
 @mcp.tool()
 async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """문서 탐색 시작점용 검색 도구.
+    """Search entry-point for wiki exploration.
 
-    권장 사용:
-    - 먼저 넓게 검색해 후보 페이지를 찾고(page id/title/url),
-    - 이후 `read_page`로 본문 확인,
-    - 필요시 `list_page_children`/`get_page_ancestors`로 문맥 확장.
+    Recommended flow:
+    - Find candidate pages first (id/title/url),
+    - Inspect content with `read_page`,
+    - Expand local/global context with `list_page_children` and `get_page_ancestors`.
 
     Quick CQL recipes (pass only this right-hand CQL expression; this tool prepends `space = <space_key> AND type = "page"`):
 
@@ -345,12 +345,12 @@ async def read_page(
     max_chars: int | None = None,
     ctx: Context | None = None,
 ) -> dict[str, Any]:
-    """문서 이해/요약 단계용 읽기 도구.
+    """Read a page as markdown for understanding/summarization.
 
-    권장 사용:
-    - 문서 윤곽만 볼 때: `header_path=["Table of Contents"]`
-    - 특정 섹션만 볼 때: `header_path=[\"상위\", \"하위\"]`
-    - 중복 헤더 이름만 주면 해당 섹션들을 모두 반환
+    Recommended usage:
+    - Quick skim: `header_path=["Table of Contents"]`
+    - Focused read: `header_path=["Parent", "Child"]`
+    - If duplicated headings match, all matching sections are returned.
     """
     client = _client_from_context(ctx)
 
@@ -408,7 +408,7 @@ async def read_page(
 
 @mcp.tool()
 async def list_page_children(page_id: str, limit: int = 50, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
-    """현재 문서 기준 하위 문서 탐색 도구(직계 depth=1)."""
+    """List direct child pages for local navigation context."""
     client = _client_from_context(ctx)
     data = await client.list_page_children(page_id=page_id, limit=limit, cursor=cursor)
 
@@ -432,7 +432,7 @@ async def list_page_children(page_id: str, limit: int = 50, cursor: str | None =
 
 @mcp.tool()
 async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[str, Any]:
-    """문서의 상위 경로(breadcrumb) 파악 도구."""
+    """Get breadcrumb-style ancestor path for global context."""
     client = _client_from_context(ctx)
     data = await client.get_page_ancestors(page_id)
 
