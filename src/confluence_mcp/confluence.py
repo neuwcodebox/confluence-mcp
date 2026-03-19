@@ -95,12 +95,8 @@ class ConfluenceClient:
         return cls(base_url=base_url, token=token, api_version=api_version)
 
     @staticmethod
-    def _compose_search_cql(cql: str, order_by: str | None = None) -> str:
-        cql_text = cql.strip()
-        effective_order = (order_by or "").strip()
-        if effective_order:
-            return f"{cql_text} ORDER BY {effective_order}"
-        return cql_text
+    def _compose_search_cql(cql: str) -> str:
+        return cql.strip()
 
     async def _request(self, path: str, params: dict[str, Any] | None = None) -> dict[str, Any]:
         url = f"{self.base_url}{path}"
@@ -138,9 +134,8 @@ class ConfluenceClient:
         cql: str,
         limit: int,
         cursor: str | None,
-        order_by: str | None = None,
     ) -> dict[str, Any]:
-        query_cql = self._compose_search_cql(cql=cql, order_by=order_by)
+        query_cql = self._compose_search_cql(cql=cql)
         if self.api_version == "v1":
             params: dict[str, Any] = {
                 "cql": query_cql,

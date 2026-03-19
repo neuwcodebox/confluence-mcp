@@ -48,7 +48,7 @@ CONFLUENCE_SSL_VERIFY=false
 
 All tools return both structured JSON (`structuredContent`) and human-readable markdown text (`content`).
 
-- `search_space_cql`: searches pages with full CQL (including your `space = ...` condition) and returns absolute page URLs. Use optional `order_by` for sorting.
+- `search_space_cql`: searches pages with full CQL (including your `space = ...` condition) and returns absolute page URLs.
 - `list_page_children`: returns direct children of a page and always includes parent title.
 - `read_page`: returns markdown content (+TOC), cache metadata, truncation metadata, and optional section-focused view. `header_path` supports array-based hierarchical syntax (e.g., `["Top", "Child", "Target"]`). If a single name is duplicated, all matched sections are returned. For quick skim, set `header_path=["TOC"]`.
 - `get_page_ancestors`: returns page breadcrumb lineage.

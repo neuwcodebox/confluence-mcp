@@ -76,7 +76,7 @@ Body
 
 ## Tool list
 1. `search_space_cql`
-   - Input: `cql`, `order_by?`, `limit`, `cursor`
+   - Input: `cql`, `limit`, `cursor`
    - Behavior: caller controls full CQL filter (include `space = ...` explicitly when needed).
    - Output: page id/title/absolute url/excerpt (markdown), next cursor
 2. `list_page_children`

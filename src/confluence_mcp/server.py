@@ -270,7 +270,6 @@ async def search_space_cql(
     cql: str,
     limit: int = 10,
     cursor: str | None = None,
-    order_by: str | None = None,
     ctx: Context | None = None,
 ) -> CallToolResult:
     """Search entry-point for wiki exploration.
@@ -280,7 +279,7 @@ async def search_space_cql(
     - Inspect content with `read_page`,
     - Expand local/global context with `list_page_children` and `get_page_ancestors`.
 
-    Quick CQL recipes (include space condition inside `cql`; use `order_by` for sorting):
+    Quick CQL recipes (include space condition inside `cql`; include ORDER BY directly in `cql` when needed):
 
     1) All pages
        space = DEV AND type = "page"
@@ -292,8 +291,7 @@ async def search_space_cql(
        space = DEV AND text ~ "runbook"
 
     4) Recently updated first
-       cql: lastmodified >= "2024/01/01"
-       order_by: lastmodified DESC
+       space = DEV AND lastmodified >= "2024/01/01" ORDER BY lastmodified DESC
 
     5) Created by current user
        creator = currentUser()
@@ -308,8 +306,7 @@ async def search_space_cql(
        lastmodified < startOfYear() OR label = needs_review
 
     9) Ordered list with tie-breaker
-       cql: type = "page"
-       order_by: created DESC, title ASC
+       space = DEV AND type = "page" ORDER BY created DESC, title ASC
 
     Tips:
     - Use double quotes for phrases/date strings.
@@ -317,7 +314,7 @@ async def search_space_cql(
     - Combine conditions with AND/OR and parentheses explicitly.
     """
     client = _client_from_context(ctx)
-    data = await client.search_space_cql(cql=cql, limit=limit, cursor=cursor, order_by=order_by)
+    data = await client.search_space_cql(cql=cql, limit=limit, cursor=cursor)
 
     items: list[PageSummary] = []
     for row in data.get("results", []):
