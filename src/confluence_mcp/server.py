@@ -36,12 +36,27 @@ def _header_map(ctx: Context | None) -> dict[str, str]:
         return {}
 
     headers: dict[str, str] = {}
+
+    # FastMCP streamable-http path: ctx.request_context.request.headers
+    request = getattr(req_ctx, "request", None)
+    if request is not None:
+        req_headers = getattr(request, "headers", None)
+        if req_headers is not None:
+            try:
+                for k, v in req_headers.items():
+                    if isinstance(v, str):
+                        headers[str(k).lower()] = v
+            except Exception:
+                pass
+
+    # Compatibility fallbacks for non-http/meta transports
     for attr in ("headers", "meta", "metadata"):
         obj = getattr(req_ctx, attr, None)
         if isinstance(obj, dict):
             for k, v in obj.items():
                 if isinstance(v, str):
                     headers[str(k).lower()] = v
+
     return headers
 
 
