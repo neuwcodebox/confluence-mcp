@@ -18,6 +18,7 @@ from confluence_mcp.confluence import (
 from confluence_mcp.models import (
     AncestorItem,
     AncestorResult,
+    ChildPageItem,
     ChildPageListResult,
     PageContent,
     PageSummary,
@@ -259,7 +260,7 @@ async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: st
             )
         )
     result = SearchResult(items=items, next_cursor=_next_cursor(data))
-    return result.model_dump()
+    return result.model_dump(exclude_none=True)
 
 
 @mcp.tool()
@@ -309,7 +310,7 @@ async def read_page(page_id: str, header: str | None = None, max_chars: int | No
         cache_hit=cache_hit,
         last_modified=((page_data.get("version") or {}).get("createdAt")),
     )
-    return result.model_dump()
+    return result.model_dump(exclude_none=True)
 
 
 @mcp.tool()
@@ -322,7 +323,7 @@ async def list_page_children(page_id: str, limit: int = 50, cursor: str | None =
     parent_title = parent_data.get("title")
 
     items = [
-        PageSummary(page_id=str(c.get("id", "")), title=c.get("title", "(untitled)"), url=None, excerpt_markdown=None)
+        ChildPageItem(page_id=str(c.get("id", "")), title=c.get("title", "(untitled)"))
         for c in data.get("results", [])
     ]
     return ChildPageListResult(
@@ -330,7 +331,7 @@ async def list_page_children(page_id: str, limit: int = 50, cursor: str | None =
         parent_title=parent_title,
         items=items,
         next_cursor=_next_cursor(data),
-    ).model_dump()
+    ).model_dump(exclude_none=True)
 
 
 @mcp.tool()
@@ -340,7 +341,7 @@ async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> dict[s
     data = await client.get_page_ancestors(page_id)
 
     breadcrumb = [AncestorItem(page_id=str(a.get("id", "")), title=a.get("title", "(untitled)")) for a in data.get("results", [])]
-    return AncestorResult(page_id=page_id, breadcrumb=breadcrumb).model_dump()
+    return AncestorResult(page_id=page_id, breadcrumb=breadcrumb).model_dump(exclude_none=True)
 
 
 def main() -> None:

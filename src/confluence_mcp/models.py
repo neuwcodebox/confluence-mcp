@@ -27,10 +27,15 @@ class PageContent(BaseModel):
     last_modified: str | None = None
 
 
+class ChildPageItem(BaseModel):
+    page_id: str
+    title: str
+
+
 class ChildPageListResult(BaseModel):
     parent_page_id: str
     parent_title: str | None = None
-    items: list[PageSummary]
+    items: list[ChildPageItem]
     next_cursor: str | None = None
 
 

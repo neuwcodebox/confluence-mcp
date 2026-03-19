@@ -45,6 +45,7 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Clients can pass returned token back to `cursor` directly.
 
 ## Content normalization
+- Tool responses omit null/unused fields to reduce LLM token usage.
 - Always convert Confluence HTML content to Markdown.
 - Return reduced/curated JSON schema only.
 - Prepend generated TOC to page read output.
