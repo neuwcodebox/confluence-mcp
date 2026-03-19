@@ -69,6 +69,7 @@ Body
 ## Tool list
 1. `search_space_cql`
    - Input: `space_key`, `cql`, `limit`, `cursor`
+   - Behavior: force `type = "page"` to exclude attachments/blogposts/etc.
    - Output: page id/title/url/excerpt (markdown), next cursor
 2. `list_page_children`
    - Input: `page_id`, `limit`, `cursor`

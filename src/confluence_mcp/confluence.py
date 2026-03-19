@@ -113,7 +113,7 @@ class ConfluenceClient:
 
     async def search_space_cql(self, space_key: str, cql: str, limit: int, cursor: str | None) -> dict[str, Any]:
         params = {
-            "cql": f"space = {space_key} AND ({cql})",
+            "cql": f"space = {space_key} AND type = \"page\" AND ({cql})",
             "limit": limit,
         }
         if cursor:

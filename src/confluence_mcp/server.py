@@ -194,7 +194,7 @@ def _truncate(text: str, limit: int) -> tuple[str, bool]:
 async def search_space_cql(space_key: str, cql: str, limit: int = 10, cursor: str | None = None, ctx: Context | None = None) -> dict[str, Any]:
     """Run CQL search in a specific space.
 
-    Quick CQL recipes (pass only this right-hand CQL expression; this tool prepends `space = <space_key>`):
+    Quick CQL recipes (pass only this right-hand CQL expression; this tool prepends `space = <space_key> AND type = "page"`):
 
     1) All pages
        type = "page"
