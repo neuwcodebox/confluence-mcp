@@ -7,6 +7,11 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - On startup, server loads `.env` automatically (development convenience).
 - Explicit process environment variables still take precedence.
 
+## TLS verification
+- Confluence HTTP client supports TLS verify control.
+- `CONFLUENCE_SSL_VERIFY=false` disables certificate verification (use only when necessary).
+- `CONFLUENCE_CA_BUNDLE` can point to a custom CA bundle path.
+
 ## Authentication
 1. **MCP server access auth**
    - Validate `Authorization` header against `MCP_AUTH_KEY` (if set).

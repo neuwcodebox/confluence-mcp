@@ -65,6 +65,17 @@ API_CACHE = TTLRUCache(
 )
 
 
+def _http_verify_option() -> bool | str:
+    verify_raw = os.getenv("CONFLUENCE_SSL_VERIFY", "true").strip().lower()
+    if verify_raw in {"0", "false", "no", "off"}:
+        return False
+
+    ca_bundle = os.getenv("CONFLUENCE_CA_BUNDLE", "").strip()
+    if ca_bundle:
+        return ca_bundle
+    return True
+
+
 class ConfluenceClient:
     def __init__(self, base_url: str, token: str) -> None:
         self.base_url = base_url.rstrip("/")
@@ -90,7 +101,7 @@ class ConfluenceClient:
             "Authorization": f"Bearer {self.token}",
             "Accept": "application/json",
         }
-        async with httpx.AsyncClient(timeout=30.0) as client:
+        async with httpx.AsyncClient(timeout=30.0, verify=_http_verify_option()) as client:
             resp = await client.get(url, headers=headers, params=params)
 
         if resp.status_code in (401, 403):

@@ -7,6 +7,7 @@
 - Implement server with MCP Python SDK (`mcp`).
 - Use `Authorization` only for MCP access key (`MCP_AUTH_KEY`) validation.
 - Use `X-Confluence-Token` first for Confluence auth, then `CONFLUENCE_TOKEN` fallback.
+- For TLS issues, support `CONFLUENCE_SSL_VERIFY` / `CONFLUENCE_CA_BUNDLE` instead of hardcoding insecure behavior.
 - Convert Confluence HTML to Markdown before returning tool results.
 - Cache markdown body to `CONFLUENCE_CACHE_DIR` with `page_id+version` cache key.
 - Add TOC and truncation (`MAX_MARKDOWN_CHARS`) for large page content.
