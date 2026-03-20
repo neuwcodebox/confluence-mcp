@@ -2,13 +2,14 @@ from __future__ import annotations
 
 import hashlib
 import os
+import re
 import time
 from collections import OrderedDict
 from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
 from typing import Any
-from urllib.parse import parse_qs, urlparse
+from urllib.parse import parse_qs, urljoin, urlparse
 
 import httpx
 from dotenv import load_dotenv
@@ -232,10 +233,80 @@ class ConfluenceClient:
         return await self._request(f"/api/v2/pages/{page_id}/ancestors")
 
 
-def html_to_markdown(value: str | None) -> str:
+_AC_IMAGE_RE = re.compile(r"<ac:image\b[^>]*>(.*?)</ac:image>", re.IGNORECASE | re.DOTALL)
+_RI_URL_RE = re.compile(r'ri:value="([^"]+)"', re.IGNORECASE)
+_RI_FILENAME_RE = re.compile(r'ri:filename="([^"]+)"', re.IGNORECASE)
+_MD_IMAGE_RE = re.compile(r"!\[([^\]]*)\]\(([^)]+)\)")
+_MD_LINK_RE = re.compile(r"(?<!!)\[([^\]]+)\]\(([^)]+)\)")
+
+
+def _absolute_url(base_url: str | None, maybe_relative: str | None) -> str | None:
+    if not maybe_relative:
+        return maybe_relative
+    if not base_url:
+        return maybe_relative
+    return urljoin(base_url.rstrip("/") + "/", maybe_relative)
+
+
+def _attachment_download_url(base_url: str | None, page_id: str | None, filename: str) -> str | None:
+    if not base_url:
+        return None
+    safe_name = filename.strip()
+    if not safe_name:
+        return None
+    if page_id:
+        return _absolute_url(base_url, f"download/attachments/{page_id}/{safe_name}")
+    return None
+
+
+def _replace_ac_image_blocks(value: str, base_url: str | None, page_id: str | None) -> str:
+    def _to_img_tag(match: re.Match[str]) -> str:
+        inner = match.group(1)
+
+        ri_url_match = _RI_URL_RE.search(inner)
+        if ri_url_match:
+            src = _absolute_url(base_url, ri_url_match.group(1))
+            return f'<img src="{src}" />' if src else ""
+
+        filename_match = _RI_FILENAME_RE.search(inner)
+        if filename_match:
+            filename = filename_match.group(1)
+            attachment_url = _attachment_download_url(base_url=base_url, page_id=page_id, filename=filename)
+            if attachment_url:
+                return f'<img src="{attachment_url}" alt="{filename}" />'
+            return f"![{filename}]({filename})"
+
+        return ""
+
+    return _AC_IMAGE_RE.sub(_to_img_tag, value)
+
+
+def _absolutize_markdown_urls(markdown_text: str, base_url: str | None) -> str:
+    if not base_url:
+        return markdown_text
+
+    def _replace_image(match: re.Match[str]) -> str:
+        alt, url = match.group(1), match.group(2).strip()
+        if url.startswith(("http://", "https://", "attachment://", "data:")):
+            return match.group(0)
+        return f"![{alt}]({_absolute_url(base_url, url)})"
+
+    def _replace_link(match: re.Match[str]) -> str:
+        text, url = match.group(1), match.group(2).strip()
+        if url.startswith(("http://", "https://", "#", "mailto:", "attachment://", "data:")):
+            return match.group(0)
+        return f"[{text}]({_absolute_url(base_url, url)})"
+
+    markdown_text = _MD_IMAGE_RE.sub(_replace_image, markdown_text)
+    return _MD_LINK_RE.sub(_replace_link, markdown_text)
+
+
+def html_to_markdown(value: str | None, base_url: str | None = None, page_id: str | None = None) -> str:
     if not value:
         return ""
-    return md(value, heading_style="ATX", escape_asterisks=False, escape_underscores=False)
+    prepared_html = _replace_ac_image_blocks(value, base_url=base_url, page_id=page_id)
+    markdown_text = md(prepared_html, heading_style="ATX", escape_asterisks=False, escape_underscores=False)
+    return _absolutize_markdown_urls(markdown_text, base_url=base_url)
 
 
 def cache_dir() -> Path:

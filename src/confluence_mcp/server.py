@@ -35,6 +35,7 @@ mcp = FastMCP(
     port=int(os.getenv("MCP_PORT", "8000")),
 )
 HEADING_RE = re.compile(r"^(#{1,6})\s+(.+?)\s*$")
+HIGHLIGHT_MARK_RE = re.compile(r"@@@(?:hl|endhl)@@@")
 
 
 def _header_map(ctx: Context | None) -> dict[str, str]:
@@ -287,6 +288,10 @@ def _yaml_metadata_block(metadata: dict[str, Any]) -> str:
     return "\n".join(lines)
 
 
+def _strip_excerpt_highlight_markers(text: str) -> str:
+    return HIGHLIGHT_MARK_RE.sub("", text)
+
+
 def _to_tool_result(structured: dict[str, Any], markdown_text: str) -> CallToolResult:
     return CallToolResult(
         content=[TextContent(type="text", text=markdown_text)],
@@ -348,19 +353,25 @@ async def search_space_cql(
     items: list[PageSummary] = []
     for row in data.get("results", []):
         content = row.get("content") or {}
+        links = content.get("_links") or {}
         excerpt_html = row.get("excerpt") or ""
+        excerpt_markdown = _strip_excerpt_highlight_markers(html_to_markdown(excerpt_html)).strip()
         items.append(
             PageSummary(
                 page_id=str(content.get("id", "")),
                 title=content.get("title") or "(untitled)",
-                url=_absolute_webui_url(client.base_url, ((content.get("_links") or {}).get("webui"))),
-                excerpt_markdown=html_to_markdown(excerpt_html),
+                url=_absolute_webui_url(client.base_url, (links.get("tinyui") or links.get("webui"))),
+                excerpt_markdown=excerpt_markdown or None,
             )
         )
     result = SearchResult(items=items, next_cursor=_next_cursor(data))
     payload = result.model_dump(exclude_none=True)
-    bullet_lines = [f"- `{item.page_id}` [{item.title}]({item.url})" if item.url else f"- `{item.page_id}` {item.title}" for item in items]
-    markdown = "\n".join(["## Search Results", *bullet_lines]) if bullet_lines else "## Search Results\n- (empty)"
+    sections: list[str] = []
+    for item in items:
+        title_line = f"## `{item.page_id}` [{item.title}]({item.url})" if item.url else f"## `{item.page_id}` {item.title}"
+        excerpt_block = item.excerpt_markdown or "(excerpt 없음)"
+        sections.append(f"{title_line}\n\n{excerpt_block}")
+    markdown = "\n\n".join(sections) if sections else "## Search Results\n\n(empty)"
     return _to_tool_result(payload, markdown)
 
 
@@ -400,7 +411,7 @@ async def read_page(
             cache_hit = True
         else:
             body_html = ((page_data.get("body") or {}).get("storage") or {}).get("value") or ""
-            raw_markdown = html_to_markdown(body_html)
+            raw_markdown = html_to_markdown(body_html, base_url=client.base_url, page_id=page_id)
             final_cache_file.write_text(raw_markdown, encoding="utf-8")
 
     toc = _build_toc(raw_markdown)

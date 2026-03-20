@@ -46,6 +46,13 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 
 ## Content normalization
 - Every tool returns structured JSON plus human-readable markdown text in unstructured content.
+- `search_space_cql` unstructured markdown includes each result's `excerpt_markdown` when available.
+- `search_space_cql` strips Confluence highlight markers (`@@@hl@@@`, `@@@endhl@@@`) while preserving enclosed text.
+- `search_space_cql` prefers Confluence tiny URL (`_links.tinyui`) over web URL for compact links.
+- `search_space_cql` unstructured markdown format per item:
+  - ``## `id` [title](url)``
+  - blank line
+  - `excerpt_markdown`
 - Tool responses omit null/unused fields to reduce LLM token usage.
 - Always convert Confluence HTML content to Markdown.
 - Return reduced/curated JSON schema only.
