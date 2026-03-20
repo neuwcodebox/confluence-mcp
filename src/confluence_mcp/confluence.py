@@ -163,6 +163,7 @@ class ConfluenceClient:
     def _normalize_v1_page(page: dict[str, Any], include_body: bool) -> dict[str, Any]:
         version = page.get("version") or {}
         author = version.get("by") or {}
+        links = page.get("_links") or {}
         normalized: dict[str, Any] = {
             "id": page.get("id"),
             "title": page.get("title"),
@@ -170,6 +171,10 @@ class ConfluenceClient:
                 "number": version.get("number"),
                 "createdAt": version.get("when"),
                 "author": {"displayName": author.get("displayName")},
+            },
+            "_links": {
+                "webui": links.get("webui"),
+                "tinyui": links.get("tinyui"),
             },
         }
         if include_body:
