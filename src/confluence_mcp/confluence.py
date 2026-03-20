@@ -9,7 +9,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from threading import RLock
 from typing import Any
-from urllib.parse import parse_qs, urljoin, urlparse
+from urllib.parse import parse_qs, quote, urljoin, urlparse
 
 import httpx
 from dotenv import load_dotenv
@@ -254,8 +254,9 @@ def _attachment_download_url(base_url: str | None, page_id: str | None, filename
     safe_name = filename.strip()
     if not safe_name:
         return None
+    encoded_name = quote(safe_name, safe="")
     if page_id:
-        return _absolute_url(base_url, f"download/attachments/{page_id}/{safe_name}")
+        return _absolute_url(base_url, f"download/attachments/{page_id}/{encoded_name}")
     return None
 
 
