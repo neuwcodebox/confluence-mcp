@@ -488,7 +488,11 @@ async def get_page_ancestors(page_id: str, ctx: Context | None = None) -> CallTo
 
     breadcrumb = [AncestorItem(page_id=str(a.get("id", "")), title=a.get("title", "(untitled)")) for a in data.get("results", [])]
     payload = AncestorResult(page_id=page_id, breadcrumb=breadcrumb).model_dump(exclude_none=True)
-    crumb = " > ".join([item.title for item in breadcrumb]) if breadcrumb else "(no ancestors)"
+    crumb = (
+        " > ".join([f"({item.page_id}) {item.title}" for item in breadcrumb]) + " > ."
+        if breadcrumb
+        else "(no ancestors) > ."
+    )
     return _to_tool_result(payload, f"## Ancestor Path\n{crumb}")
 
 
