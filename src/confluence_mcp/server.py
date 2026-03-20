@@ -382,7 +382,7 @@ async def read_page(
             cache_hit = True
         else:
             body_html = ((page_data.get("body") or {}).get("storage") or {}).get("value") or ""
-            raw_markdown = html_to_markdown(body_html)
+            raw_markdown = html_to_markdown(body_html, base_url=client.base_url, page_id=page_id)
             final_cache_file.write_text(raw_markdown, encoding="utf-8")
 
     toc = _build_toc(raw_markdown)
