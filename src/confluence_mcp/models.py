@@ -18,6 +18,7 @@ class SearchResult(BaseModel):
 class PageContent(BaseModel):
     page_id: str
     title: str
+    url: str | None = None
     version: str | None = None
     body_markdown: str
     toc_markdown: str | None = None
@@ -47,4 +48,3 @@ class AncestorItem(BaseModel):
 class AncestorResult(BaseModel):
     page_id: str
     breadcrumb: list[AncestorItem] = Field(default_factory=list)
-

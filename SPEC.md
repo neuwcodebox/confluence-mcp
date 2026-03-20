@@ -50,6 +50,8 @@ Provide a compact, non-overlapping MCP toolset so AI can navigate Confluence wik
 - Always convert Confluence HTML content to Markdown.
 - Return reduced/curated JSON schema only.
 - Prepend generated TOC to page read output.
+- Include page URL in `read_page` output (prefer Confluence `tinyui`, fallback to `webui`).
+- In unstructured `read_page` output, prepend YAML metadata including `page_id`, `title`, `version`, `last_modified`, and `url` (if available).
 - Apply truncation limit using `read_page.max_chars` or `MAX_MARKDOWN_CHARS`.
 
 ## Section-focused read (`read_page`)
@@ -84,7 +86,7 @@ Body
    - Output: parent title + direct child pages
 3. `read_page`
    - Input: `page_id`, `header_path?`, `max_chars?`
-   - Output: title/body markdown(+TOC), version, cache hit, truncation info
+   - Output: title/url/body markdown(+TOC), version, cache hit, truncation info
 4. `get_page_ancestors`
    - Input: `page_id`
    - Output: breadcrumb lineage

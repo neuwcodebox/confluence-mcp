@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import os
 import re
+import json
 from urllib.parse import parse_qs, urlparse
 from typing import Any
 
@@ -144,6 +145,18 @@ def _absolute_webui_url(base_url: str, maybe_relative: str | None) -> str | None
         return f"{base_origin}{base_path}{rel}"
     return f"{base_origin}{rel}"
 
+
+def _preferred_page_url(base_url: str, links: dict[str, Any] | None) -> str | None:
+    if not links:
+        return None
+    tiny = links.get("tinyui")
+    if isinstance(tiny, str) and tiny.strip():
+        return _absolute_webui_url(base_url, tiny)
+    webui = links.get("webui")
+    if isinstance(webui, str) and webui.strip():
+        return _absolute_webui_url(base_url, webui)
+    return None
+
 def _normalize_heading(text: str) -> str:
     return re.sub(r"\s+", " ", text.strip()).casefold()
 
@@ -256,6 +269,22 @@ def _truncate(text: str, limit: int) -> tuple[str, bool]:
         return text, False
     clipped = text[:limit].rstrip()
     return f"{clipped}\n\n...(truncated)", True
+
+
+def _yaml_metadata_block(metadata: dict[str, Any]) -> str:
+    lines = ["---"]
+    for key, value in metadata.items():
+        if value is None:
+            continue
+        if isinstance(value, bool):
+            rendered = "true" if value else "false"
+        elif isinstance(value, (int, float)):
+            rendered = str(value)
+        else:
+            rendered = json.dumps(str(value), ensure_ascii=False)
+        lines.append(f"{key}: {rendered}")
+    lines.append("---")
+    return "\n".join(lines)
 
 
 def _to_tool_result(structured: dict[str, Any], markdown_text: str) -> CallToolResult:
@@ -377,19 +406,14 @@ async def read_page(
     toc = _build_toc(raw_markdown)
     toc_path_requested = bool(header_path) and len(header_path) == 1 and _normalize_heading(header_path[0]) == _normalize_heading("TOC")
     selected = toc if toc_path_requested else (_extract_section(raw_markdown, header_path) if header_path else raw_markdown)
+    page_url = _preferred_page_url(client.base_url, page_data.get("_links"))
 
     limit = max_chars or int(os.getenv("MAX_MARKDOWN_CHARS", "12000"))
     truncated_body, truncated = _truncate(selected, limit)
-    if toc_path_requested:
-        unstructured = f"## TOC\n{truncated_body}".strip()
-    elif toc:
-        unstructured = f"## TOC\n{toc}\n\n{truncated_body}".strip()
-    else:
-        unstructured = truncated_body
-
     result = PageContent(
         page_id=str(page_data.get("id", page_id)),
         title=page_data.get("title") or "(untitled)",
+        url=page_url,
         version=str(version_no) if version_no is not None else None,
         body_markdown=truncated_body,
         toc_markdown=toc or None,
@@ -398,6 +422,26 @@ async def read_page(
         cache_hit=cache_hit,
         last_modified=((page_data.get("version") or {}).get("createdAt")),
     )
+
+    metadata_block = _yaml_metadata_block(
+        {
+            "url": result.url,
+            "page_id": result.page_id,
+            "title": result.title,
+            "version": result.version,
+            "last_modified": result.last_modified,
+        }
+    )
+
+    parts: list[str] = [metadata_block]
+    if toc_path_requested:
+        parts.append(f"## TOC\n{truncated_body}".strip())
+    elif toc:
+        parts.append(f"## TOC\n{toc}\n\n{truncated_body}".strip())
+    else:
+        parts.append(truncated_body)
+    unstructured = "\n\n".join(part for part in parts if part).strip()
+
     return _to_tool_result(result.model_dump(exclude_none=True), unstructured)
 
 
