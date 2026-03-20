@@ -243,7 +243,18 @@ def _absolute_url(base_url: str | None, maybe_relative: str | None) -> str | Non
     return urljoin(base_url.rstrip("/") + "/", maybe_relative)
 
 
-def _replace_ac_image_blocks(value: str, base_url: str | None) -> str:
+def _attachment_download_url(base_url: str | None, page_id: str | None, filename: str) -> str | None:
+    if not base_url:
+        return None
+    safe_name = filename.strip()
+    if not safe_name:
+        return None
+    if page_id:
+        return _absolute_url(base_url, f"download/attachments/{page_id}/{safe_name}")
+    return None
+
+
+def _replace_ac_image_blocks(value: str, base_url: str | None, page_id: str | None) -> str:
     def _to_img_tag(match: re.Match[str]) -> str:
         inner = match.group(1)
 
@@ -255,7 +266,10 @@ def _replace_ac_image_blocks(value: str, base_url: str | None) -> str:
         filename_match = _RI_FILENAME_RE.search(inner)
         if filename_match:
             filename = filename_match.group(1)
-            return f"![{filename}](attachment://{filename})"
+            attachment_url = _attachment_download_url(base_url=base_url, page_id=page_id, filename=filename)
+            if attachment_url:
+                return f'<img src="{attachment_url}" alt="{filename}" />'
+            return f"![{filename}]({filename})"
 
         return ""
 
@@ -282,10 +296,10 @@ def _absolutize_markdown_urls(markdown_text: str, base_url: str | None) -> str:
     return _MD_LINK_RE.sub(_replace_link, markdown_text)
 
 
-def html_to_markdown(value: str | None, base_url: str | None = None) -> str:
+def html_to_markdown(value: str | None, base_url: str | None = None, page_id: str | None = None) -> str:
     if not value:
         return ""
-    prepared_html = _replace_ac_image_blocks(value, base_url=base_url)
+    prepared_html = _replace_ac_image_blocks(value, base_url=base_url, page_id=page_id)
     markdown_text = md(prepared_html, heading_style="ATX", escape_asterisks=False, escape_underscores=False)
     return _absolutize_markdown_urls(markdown_text, base_url=base_url)
 
